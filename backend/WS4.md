@@ -192,7 +192,46 @@ identically. Do not over-claim precision about the exact value.
 
 ---
 
-## Read this first: what the classifier actually discriminates
+## Read this first: the BERT checkpoints are not usable as a gate
+
+Measured flag rate on **480 real news articles** (AG News test split, 120 each from World,
+Sports, Business, Sci/Tech), at the 0.40 threshold:
+
+| model | real news flagged as fake | recall on our synthetic fakes |
+|---|---|---|
+| `omykhailiv/bert-fake-news-recognition` | **83.1%** | 96.7% |
+| `Pulk17/Fake-News-Detection` | 61.7% | 80.0% |
+| `hamzab/roberta-fake-news-classification` | 55.2% | 56.7% |
+| **`heuristic-text-v1`** (our fallback) | **0.0%** | 73.3% |
+
+A gate that flags 83% of real news is not a gate. It escalates nearly everything, which
+destroys the cost rationale for the entire cascade — and once WS6 renders verdicts, it puts
+warnings on ordinary journalism.
+
+Broken down by category, the pattern is the register bias below, at scale:
+
+| category | flagged |
+|---|---|
+| Sports | 95.0% |
+| Sci/Tech | 95.0% |
+| Business | 79.2% |
+| World (closest to its training distribution) | 63.3% |
+
+Even World news — political hard news, the register it was trained on — is 63% false
+positives.
+
+**`DASFAX_SCREENING_MODE` therefore defaults to `heuristic`.** That is a decision made on
+evidence, and it is one env var to reverse (`=auto`) for evaluation or once a fine-tuned
+model exists.
+
+**This is not a claim that the heuristic is good.** Its 0% false-positive rate is measured
+on real articles and is trustworthy. Its 73.3% recall is measured against synthetic fakes
+*written with the very markers it looks for* — that number is circular, and its true recall
+against real misinformation is unknown. We have a gate that demonstrably does not cry wolf
+and whose sensitivity is unmeasured, which is a better starting point than the reverse, but
+it is not a finished component.
+
+## What the classifier actually discriminates
 
 The first real page ever tested through the live extension was a local South African
 story about a **chilli-eating contest**. The classifier scored it **0.999** — as

@@ -77,7 +77,23 @@ class Settings:
     # auto        real checkpoints when the weights are available, heuristic otherwise
     # huggingface strict: refuse to run at all if the real models cannot load
     # heuristic   forced offline; what CI sets
-    screening_mode: str = "auto"
+    #
+    # DEFAULTS TO "heuristic" ON EVIDENCE, not for convenience. Measured flag rate on 480
+    # REAL news articles (AG News test split, 120 each from World/Sports/Business/Sci-Tech):
+    #
+    #   omykhailiv/bert-fake-news-recognition    83.1% of real news flagged as fake
+    #   Pulk17/Fake-News-Detection               61.7%
+    #   hamzab/roberta-fake-news-classification  55.2%
+    #   heuristic-text-v1                         0.0%
+    #
+    # A gate that flags 83% of real news is not a gate — it escalates almost everything
+    # and destroys the cost rationale for the whole cascade. Set DASFAX_SCREENING_MODE=auto
+    # to run the real models anyway (for evaluation, or after fine-tuning one that works).
+    #
+    # This is NOT a claim that the heuristic is good. Its 0% false-positive rate is measured
+    # on real articles; its recall is only measured against synthetic fakes written with the
+    # markers it looks for, so that number is circular and its true recall is unknown.
+    screening_mode: str = "heuristic"
 
     # Operating thresholds. Measured, not guessed:
     #
@@ -184,7 +200,7 @@ def get_settings() -> Settings:
         evidence_per_claim=_get_int("DASFAX_EVIDENCE_PER_CLAIM", 3),
         dedup_threshold=_get_float("DASFAX_DEDUP_THRESHOLD", 0.85),
         anchor_min_similarity=_get_float("DASFAX_ANCHOR_MIN_SIMILARITY", 0.5),
-        screening_mode=_get_str("DASFAX_SCREENING_MODE", "auto"),
+        screening_mode=_get_str("DASFAX_SCREENING_MODE", "heuristic"),
         text_threshold=_get_float("DASFAX_TEXT_THRESHOLD", 0.40),
         image_threshold=_get_float("DASFAX_IMAGE_THRESHOLD", 0.70),
         bert_model_name=_get_str("DASFAX_BERT_MODEL_NAME", "omykhailiv/bert-fake-news-recognition"),
