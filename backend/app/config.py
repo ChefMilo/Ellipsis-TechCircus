@@ -39,6 +39,7 @@ class Settings:
     min_checkworthiness: float = _get_float("DASFAX_MIN_CHECKWORTHINESS", 0.35)
     evidence_per_claim: int = _get_int("DASFAX_EVIDENCE_PER_CLAIM", 3)       # proposal "done when": >=3 sources/claim
     dedup_threshold: float = _get_float("DASFAX_DEDUP_THRESHOLD", 0.85)      # token-Jaccard above this = duplicate
+    anchor_min_similarity: float = _get_float("DASFAX_ANCHOR_MIN_SIMILARITY", 0.5)  # min Dice to anchor a rewritten claim
 
 
 def get_settings() -> Settings:
