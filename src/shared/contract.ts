@@ -129,7 +129,9 @@ export type ArticleVerdictLevel = "trusted" | "ok" | "caution" | "high_risk";
 export interface ArticleVerdict {
   level: ArticleVerdictLevel;
   summary: string;
-  confidence?: number;
+  /** `null` when unset — the backend serialises nulls rather than omitting keys,
+   * because `VerifiedClaim.assessment` must stay an explicit `null` for the guard. */
+  confidence?: number | null;
 }
 
 export interface AnalysisError {
@@ -137,14 +139,31 @@ export interface AnalysisError {
   message: string;
 }
 
+/** Why the tier cascade did what it did. Optional and advisory — useful for
+ * demoing that most pages stop at Tier 2, which is the whole point of the
+ * cascade and is otherwise invisible. Never required by `isAnalysisResponse`. */
+export interface Tier2Summary {
+  escalated: boolean;
+  textScore: number;
+  maxImageScore: number;
+  reasons: string[];
+  degraded: boolean;
+  latencyMs: number;
+}
+
 export interface AnalysisResponse {
   schemaVersion: "1.0";
   url: string;
-  /** `skipped` == Tier 0 trusted source; render the "trusted" pill, no claims. */
+  /** `skipped` == Tier 0 trusted source; render the "trusted" pill, no claims.
+   * NOTE: there is deliberately no status meaning "Tier 2 screened this and
+   * stopped". A non-escalated page returns `complete` with
+   * `articleVerdict.level: "ok"` and no claims — see backend/app/pipeline/analyze.py.
+   * WS2/WS3 should ratify that or add a status. */
   status: AnalysisStatus;
   articleVerdict: ArticleVerdict;
   verifiedClaims: VerifiedClaim[];
-  errors?: AnalysisError[];
+  errors?: AnalysisError[] | null;
+  tier2?: Tier2Summary | null;
 }
 
 // --- runtime guards -------------------------------------------------------- //

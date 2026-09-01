@@ -16,8 +16,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.config import get_settings
+from app.models.analysis import AnalysisResponse
 from app.models.contract import ArticleInput, ClaimExtractionResult
 from app.models.screening import ScreeningInput, ScreeningResult
+from app.pipeline.analyze import run_analysis
 from app.pipeline.ws4 import run_ws4
 from app.pipeline.ws5 import run_ws5
 
@@ -87,6 +89,23 @@ def health() -> dict:
         # only discoverable by reading `reasons` on an individual response.
         "screening_backends": list(_WARMUP_STATUS),
     }
+
+
+# NOT response_model_exclude_none: `VerifiedClaim.assessment` must serialise as an
+# explicit `null`, because WS2's `isVerifiedClaim` guard tests `assessment === null`.
+# Dropping it would make the guard reject every claim we return. The TS optionals are
+# widened to `| null` instead — see src/shared/contract.ts.
+@app.post("/analyze", response_model=AnalysisResponse)
+def analyze(page: ScreeningInput) -> AnalysisResponse:
+    """The single call the extension makes. Tier 2 screens; escalated pages go to Tier 3.
+
+    Returns the `AnalysisResponse` envelope defined in src/shared/contract.ts — the content
+    script validates every reply against it, so drift surfaces immediately as a malformed
+    response rather than a silent mis-render.
+
+    WS3 owns this seam; see app/pipeline/analyze.py for what it deliberately does not do.
+    """
+    return run_analysis(page)
 
 
 @app.post("/tier2/screen", response_model=ScreeningResult)
