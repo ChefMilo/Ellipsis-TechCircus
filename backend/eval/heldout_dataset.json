@@ -1,0 +1,488 @@
+{
+  "meta": {
+    "name": "dasfax-ws4-calibration-v1",
+    "purpose": "Threshold calibration and CI regression guard for the Tier 2 screening models (WS4).",
+    "provenance": "SYNTHETIC. Every sample below was hand-authored for this repo. No sample is a real article, and no real person is quoted. Fake-labelled samples use invented specifics and are stylistic stand-ins for misinformation, not operational disinformation.",
+    "honesty_note": "This corpus is large enough to pick and defend an operating threshold, and small enough that its precision/recall figures must NOT be quoted to judges as model accuracy. The number to quote comes from a real held-out split (ISOT / Fakeddit): run `python ws4_eval.py --dataset path/to/isot.jsonl`.",
+    "text_label_values": ["real", "fake"],
+    "image_label_values": ["authentic", "synthetic"],
+    "sg_weighted": true
+  },
+  "text_samples": [
+    {
+      "id": "t01",
+      "label": "real",
+      "topic": "sg",
+      "title": "Dengue cases fall for third straight week",
+      "text": "The National Environment Agency said dengue cases fell to 214 in the week ending 8 March, down from 287 the week before. According to the agency, 91 active clusters remain islandwide, with the largest in the eastern part of the country. A spokesperson said inspections of about 12,000 premises in February found mosquito breeding at 380 of them. Residents were advised to check flower pot plates and scupper drains weekly."
+    },
+    {
+      "id": "t02",
+      "label": "real",
+      "topic": "sg",
+      "title": "HDB resale prices rise 1.2% in first quarter",
+      "text": "Resale flat prices rose 1.2 per cent in the first quarter of 2026, according to official figures released on Friday. That follows a 1.5 per cent increase in the previous quarter. Analysts at two local property consultancies said in a statement that supply from newly completed projects should moderate price growth over the rest of the year. A total of 6,842 resale transactions were recorded in the quarter, down 3 per cent year on year."
+    },
+    {
+      "id": "t03",
+      "label": "real",
+      "topic": "sg",
+      "title": "Train service resumes after signalling fault",
+      "text": "Train services on the affected stretch resumed at about 9.15am after a signalling fault caused delays of up to 25 minutes during the morning peak, the operator said. According to the operator, engineers traced the fault to a trackside component that was replaced overnight. Free bridging bus services were deployed between six stations for roughly 90 minutes. The transport regulator said it would review the incident report before deciding on any penalty."
+    },
+    {
+      "id": "t04",
+      "label": "real",
+      "topic": "sg",
+      "title": "Police report rise in impersonation scam cases",
+      "text": "Police said impersonation scam cases rose to 3,363 in 2025 from 1,504 in 2024. Total losses reported for the year reached S$242.9 million. In a statement, the police said victims were most commonly contacted through unsolicited calls and messaging applications. Officers advised members of the public to verify any request for payment through official channels before transferring money, and noted that government agencies do not ask for transfers over the phone."
+    },
+    {
+      "id": "t05",
+      "label": "real",
+      "topic": "sg",
+      "title": "Core inflation eases to 2.4% in February",
+      "text": "Core inflation eased to 2.4 per cent in February from 2.7 per cent in January, according to data from the statistics department. Services inflation was flat at 2.9 per cent, while food inflation moderated to 2.2 per cent. Economists at three banks said in research notes that the figure was broadly in line with expectations. The central bank has projected core inflation to average between 1.5 and 2.5 per cent for the full year."
+    },
+    {
+      "id": "t06",
+      "label": "real",
+      "topic": "sg",
+      "title": "COE premiums close mixed in latest bidding",
+      "text": "Certificate of entitlement premiums closed mixed in the latest bidding exercise that ended on Wednesday. Premiums for smaller cars fell 2.1 per cent to S$96,300, while those for larger cars rose 0.8 per cent to S$118,001. The open category closed at S$117,500. Quota for the current three-month period stands at 4,832 certificates across all categories, according to figures published by the transport authority."
+    },
+    {
+      "id": "t07",
+      "label": "real",
+      "topic": "sg",
+      "title": "Study finds gap between confidence and accuracy in spotting false news",
+      "text": "A study by a local university found that while 79 per cent of respondents were confident they could identify false news, 91 per cent misidentified at least one of five test headlines. The researchers found that confidence was not correlated with accuracy in any age group surveyed. The study surveyed 1,200 respondents between June and August and was published in a peer-reviewed journal this month."
+    },
+    {
+      "id": "t08",
+      "label": "real",
+      "topic": "sg",
+      "title": "Port container throughput up 4.6% in 2025",
+      "text": "Container throughput at the port reached 41.2 million twenty-foot equivalent units in 2025, up 4.6 per cent from the previous year, according to data from the maritime authority. Bunker sales fell 1.3 per cent over the same period. The authority said in a statement that capacity at the new terminal berths would be expanded in phases through 2027."
+    },
+    {
+      "id": "t09",
+      "label": "real",
+      "topic": "sg",
+      "title": "New bus service to link two towns from April",
+      "text": "A new bus service linking two housing estates will begin operating on 6 April, the transport authority announced on Tuesday. The service will run at intervals of 12 to 18 minutes during peak hours and will call at 21 stops along its route. According to the authority, the service was introduced after a public consultation exercise in which about 4,000 residents took part."
+    },
+    {
+      "id": "t10",
+      "label": "real",
+      "topic": "sg",
+      "title": "Employment rises for fourth consecutive quarter",
+      "text": "Total employment rose by 8,400 in the fourth quarter, marking a fourth consecutive quarterly increase, according to preliminary labour market figures. The overall unemployment rate held steady at 2.0 per cent. The manpower ministry said in a statement that growth was concentrated in the information and communications and financial services sectors, while retrenchments fell to 2,910 from 3,240 in the preceding quarter."
+    },
+    {
+      "id": "t11",
+      "label": "real",
+      "topic": "general",
+      "title": "Central bank holds benchmark rate steady",
+      "text": "The central bank held its benchmark interest rate steady at 4.25 per cent on Thursday, in a decision that matched the expectations of most economists surveyed before the meeting. In a statement, the bank said inflation had continued to moderate but remained above its 2 per cent target. Two of the nine committee members voted for a quarter-point reduction. The next policy meeting is scheduled for June."
+    },
+    {
+      "id": "t12",
+      "label": "real",
+      "topic": "general",
+      "title": "Magnitude 6.1 earthquake reported offshore",
+      "text": "A magnitude 6.1 earthquake struck about 120km offshore at a depth of 35km on Sunday morning, according to the national seismological agency. No tsunami warning was issued. Local authorities said in a statement that there were no immediate reports of casualties, and that inspections of bridges and older buildings in the two nearest districts were under way."
+    },
+    {
+      "id": "t13",
+      "label": "real",
+      "topic": "general",
+      "title": "Company reports 12% rise in quarterly revenue",
+      "text": "The company reported revenue of 4.8 billion for the quarter, up 12 per cent from a year earlier, according to results published on Monday. Operating margin narrowed to 18.2 per cent from 19.6 per cent, which the company attributed to higher component costs. The chief financial officer said in a statement that full-year guidance was unchanged. Shares closed 2.4 per cent lower following the announcement."
+    },
+    {
+      "id": "t14",
+      "label": "real",
+      "topic": "general",
+      "title": "Court upholds ruling in data protection case",
+      "text": "An appeals court upheld a lower court ruling in a data protection case on Wednesday, according to court documents released the same day. The three-judge panel found that the regulator had acted within its statutory powers when it issued the original penalty. The company said in a statement it was reviewing the judgment. The penalty, first issued in 2024, was set at 1.1 million."
+    },
+    {
+      "id": "t15",
+      "label": "real",
+      "topic": "general",
+      "title": "Study links urban tree cover to lower daytime temperatures",
+      "text": "Researchers found that neighbourhoods with tree canopy cover above 30 per cent recorded daytime surface temperatures an average of 1.8 degrees Celsius lower than comparable areas below 10 per cent cover. The study analysed satellite imagery from 46 cities collected between 2019 and 2024. According to the authors, the effect was strongest in the late afternoon. The paper was published in a peer-reviewed journal on Monday."
+    },
+    {
+      "id": "t16",
+      "label": "real",
+      "topic": "general",
+      "title": "Airline adds three routes for winter schedule",
+      "text": "The airline will add three routes to its winter schedule from 28 October, according to a filing published this week. Two of the routes will be served four times weekly and the third daily. A spokesperson said the additions reflect a 9 per cent increase in planned seat capacity compared with the same period last year. Ticket sales opened on Friday."
+    },
+    {
+      "id": "t17",
+      "label": "real",
+      "topic": "sg",
+      "title": "Water demand projected to rise by 2065",
+      "text": "The national water agency projects that total water demand could nearly double by 2065, with the non-domestic sector accounting for about 70 per cent of the total. According to the agency, desalination and reclaimed water are expected to meet up to 85 per cent of demand by then. Household consumption averaged 141 litres per person per day in 2025, down from 143 litres the year before."
+    },
+    {
+      "id": "t18",
+      "label": "real",
+      "topic": "sg",
+      "title": "Primary school registration exercise opens",
+      "text": "Registration for the annual primary school admission exercise opened on Tuesday and will run in phases until September, the education ministry said. According to the ministry, 33 schools were oversubscribed at the equivalent stage last year and required balloting. Parents were advised to check vacancy figures published daily on the ministry website before submitting an application."
+    },
+    {
+      "id": "t19",
+      "label": "real",
+      "topic": "general",
+      "title": "Regulator fines telecom operator over outage",
+      "text": "The telecommunications regulator fined an operator 3.2 million over a nationwide outage that lasted about seven hours in November, according to a statement published on Thursday. The regulator found that the operator had not maintained adequate redundancy at two core network sites. The operator said in a statement that it had since completed remedial work and would not appeal the decision."
+    },
+    {
+      "id": "t20",
+      "label": "real",
+      "topic": "general",
+      "title": "Vaccination coverage reaches 89% among older adults",
+      "text": "Influenza vaccination coverage among adults aged 65 and above reached 89 per cent this season, up from 84 per cent last season, according to health authority figures. The authority said in a statement that mobile vaccination teams visited 210 residential sites between October and January. Coverage among adults aged 18 to 49 remained lower, at 41 per cent."
+    },
+    {
+      "id": "t21",
+      "label": "real",
+      "topic": "sg",
+      "title": "Public consultation opens on cycling path rules",
+      "text": "A six-week public consultation on proposed changes to cycling path rules opened on Monday, according to the transport authority. The proposals include a lower speed limit on shared paths and clearer signage at 340 junctions. The authority said feedback received during a previous exercise in 2024, which drew about 7,600 responses, informed the current draft. Submissions close on 15 May."
+    },
+    {
+      "id": "t22",
+      "label": "real",
+      "topic": "general",
+      "title": "Retail sales edge up 0.6% in January",
+      "text": "Retail sales rose 0.6 per cent year on year in January, according to figures published by the statistics department on Friday. Excluding motor vehicles, sales were up 1.1 per cent. Department store sales fell 2.3 per cent, while online sales accounted for 13.8 per cent of the retail total. Economists noted that the timing of the festive period made month-on-month comparisons less meaningful."
+    },
+
+    {
+      "id": "t23",
+      "label": "fake",
+      "topic": "sg",
+      "title": "SHOCKING: They don't want you to know what's REALLY in your tap water",
+      "text": "WAKE UP! Sources say a secret report has been buried for months. Insiders claim officials have known ALL ALONG and did nothing!! Everyone knows the mainstream media will never touch this story. Allegedly the levels are 100% higher than what they admit publicly. Share this before it's deleted!! They are already censoring posts about it. Tell everyone you know before it's too late!!!"
+    },
+    {
+      "id": "t24",
+      "label": "fake",
+      "topic": "general",
+      "title": "The miracle cure doctors are BANNED from telling you about",
+      "text": "Big pharma doesn't want you to know about this. A common kitchen ingredient has been proven beyond any doubt to reverse the condition completely, but the truth about it has been covered up for decades. Sources say a suppressed study showed a 100% success rate. Doctors are allegedly threatened if they discuss it. This is why they keep it secret! Must read and share before it gets taken down!!"
+    },
+    {
+      "id": "t25",
+      "label": "fake",
+      "topic": "sg",
+      "title": "BOMBSHELL: Bank about to COLLAPSE — withdraw your money NOW",
+      "text": "Insiders say the doors will be shut by Friday. People are saying the queues have already started. Nobody is talking about this because the mainstream media is completely controlled. Allegedly the reserves are gone and it is definitely going to happen this week. WITHDRAW EVERYTHING. Forward this to everyone in your family group chat before it's deleted!! They are already deleting posts!!!"
+    },
+    {
+      "id": "t26",
+      "label": "fake",
+      "topic": "general",
+      "title": "EXPOSED: The election was rigged and here's the proof they hid",
+      "text": "You won't believe what happened next. Sources claim the numbers were changed overnight and insiders say the evidence is undeniable. Everyone knows the count was never independently verified — they always do this and nobody is talking about it! It is 100% confirmed by people close to the process. Spread the word before this post disappears. Censored everywhere else!!"
+    },
+    {
+      "id": "t27",
+      "label": "fake",
+      "topic": "sg",
+      "title": "FREE $1,500 payout for all residents — claim before it closes!",
+      "text": "Great news! Every resident is eligible and it is guaranteed, no questions asked. Sources say the scheme was quietly approved and will only be open for 48 hours. Many believe the announcement was deliberately kept quiet. It is definitely real, we checked! Must read. Forward this to everyone before the link stops working!! Do not miss out!!!"
+    },
+    {
+      "id": "t28",
+      "label": "fake",
+      "topic": "general",
+      "title": "The TRUTH about 5G towers they've been hiding from you",
+      "text": "This is why they built them so fast. Allegedly the radiation levels are far higher than admitted, and insiders claim internal documents prove it. Everyone knows the studies were funded by the same companies! The deep state has always suppressed this research. It is a complete cover-up. Warn your friends and share this before it's deleted — they are already censoring it!!"
+    },
+    {
+      "id": "t29",
+      "label": "fake",
+      "topic": "sg",
+      "title": "URGENT: New tax on all bank transfers starting next week",
+      "text": "It is 100% confirmed. Sources say every transfer above a small amount will be taxed automatically and nobody was told. Insiders claim it was buried deep in a document nobody reads. People are saying the banks have already been instructed. This is outrageous! They never announce these things properly. Circulate this to your contacts before it is quietly rolled out!!"
+    },
+    {
+      "id": "t30",
+      "label": "fake",
+      "topic": "general",
+      "title": "SCANDAL: What they found in that shipment will SHOCK you",
+      "text": "You won't believe what was really inside. Sources claim the containers were quietly diverted and insiders say the paperwork was destroyed. Nobody is talking about this. Allegedly the whole thing has been covered up for years and the mainstream media refuses to report it. It is undeniable at this point. Repost this before it is taken down!!!"
+    },
+    {
+      "id": "t31",
+      "label": "fake",
+      "topic": "sg",
+      "title": "They are secretly closing three MRT lines — insiders reveal all",
+      "text": "Sources say the closures were decided months ago and the announcement is being delayed on purpose. Insiders claim staff have already been told. Everyone knows the system has been failing for years and they always hide it! It is definitely happening. Nobody in the mainstream media will touch this. Share before it's deleted and warn your friends!!"
+    },
+    {
+      "id": "t32",
+      "label": "fake",
+      "topic": "general",
+      "title": "This one trick banks HATE — clear all your debt in 30 days",
+      "text": "The truth about debt is that they never want you to know this. Sources say a legal loophole has been used quietly by insiders for years, and it is guaranteed to work 100% of the time. Banks have allegedly lobbied to keep it out of the news. This is why nobody talks about it! Must read. Share this with everyone before it is banned!!"
+    },
+    {
+      "id": "t33",
+      "label": "fake",
+      "topic": "sg",
+      "title": "ALERT: Contaminated food products still on shelves — list inside",
+      "text": "Sources claim the recall was quietly cancelled and insiders say the products were never removed. People are saying several stores are still selling them right now. Nobody is talking about it because the companies are big advertisers. It is definitely still on the shelves! Allegedly officials knew weeks ago. Forward this to your family group chat immediately!!!"
+    },
+    {
+      "id": "t34",
+      "label": "fake",
+      "topic": "general",
+      "title": "Celebrity death hoax spreads — or is it a cover-up?",
+      "text": "Sources say the announcement was pulled within minutes. Insiders claim the family was told to stay silent. Everyone knows this has happened before and the mainstream media always covers for them! Allegedly the footage was edited. It is 100% suspicious. Nobody is talking about the timing. Repost this before it disappears again!!"
+    },
+    {
+      "id": "t35",
+      "label": "fake",
+      "topic": "sg",
+      "title": "SHOCKING new rule means you could lose your flat — nobody told you",
+      "text": "Insiders say the change was slipped in without any announcement. Sources claim thousands of households are already affected and nobody was notified. Everyone knows they never tell you these things upfront! It is completely outrageous and definitely happening now. The mainstream media is silent. Tell everyone you know and share before it's deleted!!"
+    },
+    {
+      "id": "t36",
+      "label": "fake",
+      "topic": "general",
+      "title": "Scientists SILENCED after discovering what's in the vaccine",
+      "text": "The truth about it has been buried. Sources say the researchers were removed from their posts within days, and insiders claim their data was destroyed. Big pharma has always controlled which studies get published! It is undeniable. Everyone knows the trials were never properly reviewed. This is a total cover-up. Warn your friends and spread the word before this is censored!!!"
+    },
+    {
+      "id": "t37",
+      "label": "fake",
+      "topic": "sg",
+      "title": "Petrol prices to DOUBLE overnight — leaked document reveals",
+      "text": "A leaked document allegedly shows the increase takes effect at midnight. Sources say station operators were told last week. People are saying queues have already formed. Nobody is talking about it in the news because they were told not to! It is 100% going to happen. Fill up now and forward this to everyone before it's deleted!!"
+    },
+    {
+      "id": "t38",
+      "label": "fake",
+      "topic": "general",
+      "title": "The secret ingredient in fast food that they NEVER put on the label",
+      "text": "You won't believe what is really in it. Sources claim a suppressed lab report found substances that were never disclosed, and insiders say the labelling rules were written by the industry itself. Everyone knows the regulators are captured! It is definitely in there. This is why they fight every disclosure law. Must read — share before it is taken down!!"
+    },
+    {
+      "id": "t39",
+      "label": "fake",
+      "topic": "sg",
+      "title": "BREAKING: New law bans home cooking smells — fines up to $5,000",
+      "text": "Sources say enforcement officers have already started issuing notices. Insiders claim the rule was passed quietly last month with no debate. Everyone knows they always sneak these things through! It is 100% real, we verified it. Nobody in the media will report this. Outrageous! Circulate this before the post is removed!!!"
+    },
+    {
+      "id": "t40",
+      "label": "fake",
+      "topic": "general",
+      "title": "Weather modification EXPOSED — the storms were not natural",
+      "text": "Allegedly the pattern is far too regular to be natural. Sources claim the programme has been running for years and insiders say the flight records were sealed. Everyone knows the deep state has this technology! It is undeniable if you look at the data they won't show you. This is a cover-up. Wake up and share this before it's censored!!"
+    },
+    {
+      "id": "t41",
+      "label": "fake",
+      "topic": "sg",
+      "title": "Your CPF savings are being moved without your consent — insiders speak out",
+      "text": "Sources say the transfers began quietly this month. Insiders claim account holders were never notified and the paperwork is deliberately confusing. Everyone knows they never explain these things clearly! It is definitely happening to thousands of people right now. Nobody is talking about it. Check your account and forward this to everyone before it's deleted!!"
+    },
+    {
+      "id": "t42",
+      "label": "fake",
+      "topic": "general",
+      "title": "Hospital whistleblower reveals the numbers were ALWAYS fake",
+      "text": "Sources say the internal figures never matched what was published. Insiders claim staff were instructed to reclassify cases. Everyone knows the statistics were politically convenient! Allegedly the discrepancy is enormous. The mainstream media has completely ignored this bombshell. It is a scandal. Must read and repost before it gets taken down!!!"
+    },
+    {
+      "id": "t43",
+      "label": "fake",
+      "topic": "sg",
+      "title": "New scam alert is FAKE — the real scam is the app they want you to install",
+      "text": "Sources claim the official app collects far more than they admit, and insiders say the permissions were never disclosed properly. Everyone knows nobody reads the terms! It is 100% tracking everything you do. This is why they pushed it so hard. Nobody is talking about it. Warn your friends and share this before it is censored!!"
+    },
+    {
+      "id": "t44",
+      "label": "fake",
+      "topic": "general",
+      "title": "Airline knew about the fault for MONTHS, leaked memo allegedly shows",
+      "text": "Insiders say the memo circulated internally long before the incident. Sources claim maintenance warnings were repeatedly ignored to keep aircraft flying. Everyone knows the inspections are a formality! Allegedly the documents have since been destroyed. It is a complete cover-up and the media will not touch it. Spread the word before this is deleted!!"
+    },
+
+    {
+      "id": "t45",
+      "label": "real",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD NEGATIVE — legitimate court reporting leans on 'allegedly' constantly",
+      "title": "Three charged over alleged investment scheme",
+      "text": "Three men were charged on Tuesday over an alleged investment scheme that police say took in about 2.4 million from 61 investors. The men allegedly told investors the funds would be placed in overseas property. According to charge sheets, the scheme allegedly ran from March 2024 to January 2026. All three allegedly continued accepting deposits after the regulator issued a warning. The case was adjourned to 14 April."
+    },
+    {
+      "id": "t46",
+      "label": "real",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD NEGATIVE — genuine investigative journalism uses 'documents show', 'cover-up'",
+      "title": "Internal documents show regulator was warned two years before collapse",
+      "text": "Internal documents obtained under freedom of information laws show the regulator received detailed warnings about the firm 26 months before it collapsed. According to the documents, three separate assessments flagged the same liquidity risk. A former official said in an interview that concerns were escalated but not acted upon. The regulator said in a statement it accepted the findings and had since changed its escalation process. Critics have described the delay as a cover-up."
+    },
+    {
+      "id": "t47",
+      "label": "real",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD NEGATIVE — acronym-dense local reporting; a naive ALL-CAPS feature reads this as shouting",
+      "title": "MOH, HDB and CPF changes take effect from April",
+      "text": "MOH said the revised subsidy tiers take effect on 1 April, according to a joint statement with MOF. HDB confirmed that CPF housing grant limits will be adjusted at the same time. LTA said COE quota changes announced earlier remain unchanged, while IRAS confirmed the GST treatment is unaffected. MOM, IMDA and CSA were also consulted during the review, which began in 2025."
+    },
+    {
+      "id": "t48",
+      "label": "real",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD NEGATIVE — genuine public-service advisories really do say 'share this with elderly relatives'",
+      "title": "Police advisory: new variant of impersonation scam",
+      "text": "Police issued an advisory on Monday about a new variant of the government official impersonation scam. According to the advisory, victims received calls from someone claiming to be an officer and were told their bank accounts were involved in money laundering. Police said no government agency will ask for bank transfers over the phone. Members of the public are urged to share this advisory with elderly relatives and to verify any such call through official hotlines."
+    },
+    {
+      "id": "t49",
+      "label": "real",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD NEGATIVE — a published opinion column: strong, absolutist language, but not misinformation",
+      "title": "Commentary: the housing debate always avoids the obvious question",
+      "text": "Every time this debate resurfaces, the same point is never addressed. Supply is always framed as the whole story, and demand is always left out. That is undeniably convenient for everyone involved. The truth about the last decade is that policy has consistently chased the symptom. Anyone who has followed the numbers knows the pattern by now, and pretending otherwise helps no one."
+    },
+    {
+      "id": "t50",
+      "label": "real",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD NEGATIVE — a real recall notice is genuinely urgent",
+      "title": "Urgent recall issued for batch of infant formula",
+      "text": "The food agency issued an urgent recall on Friday for one batch of infant formula after routine testing detected a contaminant above permitted levels. According to the agency, the affected batch code is printed on the base of the tin. Consumers who bought the product were told to stop using it immediately and return it for a full refund. The importer said in a statement that the batch had been withdrawn from all retailers."
+    },
+    {
+      "id": "t51",
+      "label": "real",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD NEGATIVE — 'conspiracy' used in its legal sense",
+      "title": "Two convicted of conspiracy to defraud",
+      "text": "Two former executives were convicted on Thursday of conspiracy to defraud following a seven-week trial. Prosecutors said the pair inflated revenue figures across four reporting periods. According to court documents, the conspiracy involved backdated contracts with two related companies. Sentencing was set for 3 June. Defence lawyers said their clients were considering an appeal."
+    },
+    {
+      "id": "t52",
+      "label": "real",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD NEGATIVE — genuine breaking news: short, urgent, thin on attribution because it is early",
+      "title": "Fire breaks out at industrial building; no injuries reported",
+      "text": "A fire broke out at an industrial building on Tuesday afternoon and was extinguished within an hour. The civil defence force said it was alerted at about 2.40pm and deployed four fire engines. About 80 people were evacuated from the building. No injuries were reported. The cause of the fire is under investigation."
+    },
+
+    {
+      "id": "t53",
+      "label": "fake",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD POSITIVE — calm register, fabricated study attribution; what sophisticated misinformation actually looks like",
+      "title": "Study finds common food additive linked to memory decline",
+      "text": "A study published this month found that a widely used food additive is associated with measurable memory decline in adults over 50. According to the researchers, participants consuming the additive daily scored 14 per cent lower on recall tests over an 18-month period. The paper reported that the association held after adjusting for age and education. The additive is currently permitted in most markets and appears in a wide range of packaged foods."
+    },
+    {
+      "id": "t54",
+      "label": "fake",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD POSITIVE — fabricated statistic in a plain news register",
+      "title": "Report: one in three households behind on utility payments",
+      "text": "One in three households is now behind on utility payments, according to a report released this week. The report found that arrears rose 41 per cent over the past year, with the sharpest increase among households in the lowest income quintile. It said the average outstanding amount reached 480 dollars. The findings were based on billing records from the second half of 2025."
+    },
+    {
+      "id": "t55",
+      "label": "fake",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD POSITIVE — fabricated policy change written like a press release",
+      "title": "New rule requires registration of home-based food businesses",
+      "text": "Home-based food businesses will be required to register with the authorities from 1 July under a new rule announced this week. According to the announcement, operators earning above 12,000 dollars a year must submit a declaration and complete a hygiene module. A transition period runs until 31 December, after which unregistered operators may face composition fines of up to 800 dollars."
+    },
+    {
+      "id": "t56",
+      "label": "fake",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD POSITIVE — miscontextualised event, stated plainly with no sensational markers",
+      "title": "Footage shows troops deployed to city centre this week",
+      "text": "Footage circulating this week shows military vehicles moving through a city centre. The footage has been described as showing a deployment that took place on Monday. According to accounts accompanying the footage, additional units were moved into the district overnight. Local residents were reported to have been advised to remain indoors. Authorities have not commented on the reported deployment."
+    },
+    {
+      "id": "t57",
+      "label": "fake",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD POSITIVE — false attribution to an unnamed official report, calm tone",
+      "title": "Government report said to recommend phasing out cash payments",
+      "text": "A government report is understood to recommend phasing out cash payments for public services by 2030. According to the report, the transition would begin with transport and municipal fees before extending to healthcare co-payments. The document reportedly sets out a four-stage timetable. Officials have not published the report, and no implementation date has been confirmed publicly."
+    },
+    {
+      "id": "t58",
+      "label": "fake",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD POSITIVE — fabricated recall, indistinguishable in tone from t50 which is real",
+      "title": "Recall issued for imported seafood over contamination concerns",
+      "text": "A recall was issued this week for several imported seafood products following contamination concerns. According to the notice, affected products were distributed to supermarkets and wet markets between January and March. Consumers were advised to check batch numbers printed on the packaging. The importer said affected stock had been removed from shelves and that testing was ongoing."
+    },
+    {
+      "id": "t59",
+      "label": "fake",
+      "topic": "sg",
+      "hard": true,
+      "note": "HARD POSITIVE — plausible fabricated economic figure",
+      "title": "Median household income fell for the first time in a decade",
+      "text": "Median household income fell 2.1 per cent in real terms last year, the first decline in a decade, according to figures cited this week. The drop was attributed to slower wage growth in the services sector combined with higher inflation in the second half. Households in the middle two quintiles were said to be most affected. The figures have not yet appeared in the annual statistical release."
+    },
+    {
+      "id": "t60",
+      "label": "fake",
+      "topic": "general",
+      "hard": true,
+      "note": "HARD POSITIVE — fabricated research finding with a specific-sounding methodology",
+      "title": "Researchers report screen time linked to reduced attention span in adults",
+      "text": "Researchers reported this week that adults averaging more than six hours of daily screen time showed a measurable reduction in sustained attention. According to the study, 1,400 participants were tracked over two years using a standard attention assessment. The authors said the effect was independent of sleep duration and was most pronounced among participants aged 25 to 34. The work has not yet been replicated."
+    }
+  ],
+  "image_samples": [
+    {"id": "i01", "label": "synthetic", "image_url": "https://cdn.example.org/uploads/midjourney/portrait-9f2a.png", "note": "generator name in path"},
+    {"id": "i02", "label": "synthetic", "image_url": "https://images.example.net/2026/03/stable-diffusion-crowd-scene.jpg", "note": "generator name in path"},
+    {"id": "i03", "label": "synthetic", "image_url": "https://thispersondoesnotexist.com/image", "note": "known synthetic-face host"},
+    {"id": "i04", "label": "synthetic", "image_url": "https://cdn.example.org/ai-generated/flood-street-4b1c.webp", "note": "explicit ai-generated path segment"},
+    {"id": "i05", "label": "synthetic", "image_url": "https://civitai.example.org/xg/preview-sdxl-0093.png", "note": "generator host and model marker"},
+    {"id": "i06", "label": "synthetic", "image_url": "https://media.example.net/dalle-3/press-conference.png", "note": "generator name in path"},
+    {"id": "i07", "label": "synthetic", "image_url": "https://generated.photos/vue-static/home/dataset/0d7f.jpg", "note": "known synthetic-face dataset host"},
+    {"id": "i08", "label": "synthetic", "image_url": "https://cdn.example.org/assets/leonardo.ai/skyline-render.jpg", "note": "generator host in path"},
+    {"id": "i09", "label": "authentic", "image_url": "https://www.reuters.com/resizer/2026/03/dock-workers.jpg", "note": "wire service"},
+    {"id": "i10", "label": "authentic", "image_url": "https://media.gettyimages.com/photos/parliament-session-id1478.jpg", "note": "stock library"},
+    {"id": "i11", "label": "authentic", "image_url": "https://www.straitstimes.com/multimedia/2026/03/mrt-platform.jpg", "note": "licensed news outlet"},
+    {"id": "i12", "label": "authentic", "image_url": "https://www.channelnewsasia.com/image/2026/budget-debate.jpg", "note": "licensed news outlet"},
+    {"id": "i13", "label": "authentic", "image_url": "https://file.gov.sg/press/2026/announcement-photo.jpg", "note": "government domain"},
+    {"id": "i14", "label": "authentic", "image_url": "https://blog.example.org/wp-content/uploads/2026/02/office-desk.jpg", "note": "no provenance signal either way"},
+    {"id": "i15", "label": "authentic", "image_url": "https://cdn.example.net/photos/hawker-centre-evening.jpg", "note": "no provenance signal either way"},
+    {"id": "i16", "label": "authentic", "image_url": "https://static.example.org/img/2026/03/harbour-front-dawn.jpeg", "note": "no provenance signal either way"},
+    {"id": "i17", "label": "authentic", "image_url": "https://www.apimages.com/preview/2026/summit-handshake.jpg", "note": "wire service"},
+    {"id": "i18", "label": "authentic", "image_url": "data:image/png;base64,iVBORw0KGgo=", "note": "unusable URL; must be skipped, not scored"}
+  ]
+}

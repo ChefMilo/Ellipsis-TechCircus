@@ -1,0 +1,24 @@
+# WS4 Tier 2 — the real models (proposal §2.2).
+#
+# Deliberately NOT in requirements.txt. CI and anyone who only needs the API installs the
+# base file and runs entirely offline against the heuristic fallback in ~10 seconds; this
+# file is ~2.5GB and is only needed to run, evaluate or demo the actual checkpoints.
+#
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# On Linux, pip defaults to the CUDA build of torch (~2.5GB). For CPU-only screening —
+# which is what Tier 2 does — take the CPU wheels instead (~200MB):
+#
+#   pip install -r requirements-ml.txt --index-url https://download.pytorch.org/whl/cpu
+#
+# Pinned below transformers 5: both named checkpoints were serialised with 4.4x, and v5
+# is a breaking release.
+torch>=2.3
+transformers>=4.40,<5
+pillow>=10
+# Explicit CA bundle for image fetching. Without it, a python.org macOS build has no
+# usable trust store and EVERY https image fetch fails CERTIFICATE_VERIFY_FAILED.
+certifi>=2024.2
+
+# Evaluation and calibration only (ws4_eval.py --corpus). Not needed to serve.
+datasets>=2.19
