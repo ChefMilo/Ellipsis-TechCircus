@@ -5,15 +5,20 @@
   "type": "module",
   "description": "WS1 - Extension Shell & Page Triage (Chrome MV3 fact-checking extension)",
   "scripts": {
-    "build": "esbuild src/background/service-worker.ts --bundle --format=esm --outfile=extension/service-worker.js",
+    "build": "esbuild src/background/service-worker.ts --bundle --format=esm --outfile=extension/service-worker.js && esbuild src/content/bootstrap.ts --bundle --format=iife --outfile=extension/content-script.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.270",
+    "@types/jsdom": "^30.0.0",
     "esbuild": "^0.24.0",
+    "jsdom": "^29.1.1",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0"
   }
 }

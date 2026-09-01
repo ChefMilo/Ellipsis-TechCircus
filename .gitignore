@@ -221,5 +221,6 @@ CLAUDE.local.md
 # Node / extension build
 node_modules/
 extension/service-worker.js
+extension/content-script.js
 npm-debug.log*
 *.tsbuildinfo
