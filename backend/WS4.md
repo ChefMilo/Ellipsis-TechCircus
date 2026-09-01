@@ -76,10 +76,44 @@ roughly 60–150 words; at 900 it collapses to noise. Chunked scoring is therefo
 workaround bolted onto a working model — it is the way to keep this checkpoint inside the
 only input range where it functions at all.
 
-`Pulk17/Fake-News-Detection` is worth evaluating as an alternative: it names its dataset
-and its card describes classifying article *content* rather than titles. Treat its reported
-99.58% accuracy / 99.99% ROC-AUC with suspicion — those are the numbers a leaky benchmark
-produces.
+### We kept it anyway, because we measured the alternatives
+
+Three public checkpoints, same corpus, same input handling per each card's documented
+format:
+
+| checkpoint | AUROC all | AUROC hard | recall@0.40 | FPR@0.40 | ms/doc |
+|---|---|---|---|---|---|
+| **`omykhailiv/bert-fake-news-recognition`** (ours) | **0.947** | **0.766** | 0.967 | 0.233 | 16 |
+| `Pulk17/Fake-News-Detection` | 0.934 | 0.766 | 0.800 | **0.067** | 13 |
+| `hamzab/roberta-fake-news-classification` | 0.907 | 0.719 | 0.567 | 0.033 | 19 |
+
+The result is counter-intuitive and worth stating plainly. `hamzab` is the one that *looks*
+right on paper — 200× more downloads than ours, `roberta-base`, an explicit
+`<title>…<content>…<end>` article format, and trained on the Kaggle fake-and-real-news
+dataset, **which is ISOT**, exactly what the proposal names. It reports **100% accuracy** on
+that dataset. It is the worst of the three here, catching 57% of fakes against our 97%.
+
+That is the artifact story in one line: 100% on ISOT buys nothing out of distribution.
+Our accidental title-classifier beats it.
+
+`Pulk17` is the honest runner-up — clearly better precision (FPR 0.067 vs 0.233) at lower
+recall. Under a recall-first policy ours still wins, and it wins on AUROC too, so this is
+not a threshold artefact. If the escalation budget ever becomes the binding constraint,
+`Pulk17` is the swap to make.
+
+### Dilution is not a model choice — it is the task formulation
+
+All three collapse identically when a fake passage is diluted into a 900-word article:
+
+| checkpoint | fake passage alone | same passage in 900 w | clean 900 w |
+|---|---|---|---|
+| omykhailiv | 0.9997 | 0.0095 | 0.0063 |
+| Pulk17 | 0.9784 | 0.0002 | 0.0002 |
+| hamzab | 0.9998 | 0.0001 | 0.0000 |
+
+**Swapping checkpoints cannot fix this.** Every whole-document fake-news classifier scores
+the register of the document as a whole. Chunked scoring, or moving the signal to Tier 3's
+claim level, are the only routes.
 
 Three backend modes via `DASFAX_SCREENING_MODE`:
 
