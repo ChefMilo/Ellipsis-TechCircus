@@ -46,8 +46,12 @@ function startFactCheck(): void {
   requestAnalysis({
     url,
     title: document.title,
+    // Sent straight through, untouched -- WS5's claim offsets index into
+    // this exact string. Do not re-normalize/reflow it here.
     text: extracted?.bodyText,
     images: extracted?.imageUrls,
+    published_at: extracted?.publishDate ?? undefined,
+    source_domain: extracted?.sourceDomain ?? undefined,
   })
     .then((response) =>
       response.status === "skipped"

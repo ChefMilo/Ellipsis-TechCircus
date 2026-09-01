@@ -10,10 +10,10 @@ import { Readability } from "@mozilla/readability";
  *   short-circuit before Tier 1/2 ever run (see bootstrap.ts). If the
  *   backend wants extracted text from whitelisted articles too (e.g. to
  *   build a corroboration corpus), that wiring needs to change.
- * - `publishDate` is whatever string Readability/meta-tags/JSON-LD yield
- *   (usually ISO 8601 from <meta>/JSON-LD, but the DOM fallback below can
- *   return an arbitrary human-readable string like "2 Sept, 5:30pm"). Not
- *   normalized. Flag if the backend needs a guaranteed ISO 8601 string.
+ * - `publishDate` is normalized to ISO 8601 (via `Date.toISOString()`) when
+ *   parseable, and `null` otherwise -- rather than forwarding an unparseable
+ *   human-readable string that would fail WS3's `ArticleInput.published_at:
+ *   datetime | None` validation. Locked with WS3 2026-09-01.
  * - `bodyText` is a single flattened string (paragraph breaks collapsed to
  *   single spaces). Flag if claim extraction (WS5) would rather receive an
  *   array of paragraphs.
@@ -28,6 +28,8 @@ export interface ExtractedArticle {
   bodyText: string;
   publishDate: string | null;
   author: string | null;
+  /** Hostname the article was extracted from, e.g. "straitstimes.com". */
+  sourceDomain: string | null;
   imageUrls: string[];
   whitelisted: boolean;
   articleConfidence: number;
@@ -67,6 +69,28 @@ function resolveUrl(raw: string, baseUrl: string): string | null {
   } catch {
     return null;
   }
+}
+
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Normalizes a date string to ISO 8601, or null if unparseable. Backend
+ * ArticleInput.published_at is a strict `datetime | None` -- sending an
+ * unparseable string would fail validation, so an unparseable date is
+ * dropped rather than forwarded as-is.
+ */
+function normalizeToIso8601(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function looksLikeTrackingOrIcon(
@@ -167,8 +191,9 @@ export function extractArticle(
     url,
     title: cleanText(parsed.title) ?? cleanText(document.title) ?? "",
     bodyText: cleanText(parsed.textContent) ?? "",
-    publishDate: cleanText(parsed.publishedTime) ?? fallbackDate(document),
+    publishDate: normalizeToIso8601(cleanText(parsed.publishedTime) ?? fallbackDate(document)),
     author: cleanText(parsed.byline) ?? fallbackAuthor(document),
+    sourceDomain: hostnameOf(url),
     imageUrls: parsed.content ? extractImageUrls(parsed.content, url) : [],
     whitelisted: options.whitelisted,
     articleConfidence: options.articleConfidence,

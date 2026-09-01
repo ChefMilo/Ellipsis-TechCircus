@@ -45,7 +45,8 @@ describe("extractArticle", () => {
     expect(result?.bodyText.length).toBeGreaterThan(500);
     expect(result?.bodyText).not.toContain("Site footer");
     expect(result?.author).toBe("By Jane Tan");
-    expect(result?.publishDate).toBe("2026-09-01T08:00:00Z");
+    expect(result?.publishDate).toBe("2026-09-01T08:00:00.000Z");
+    expect(result?.sourceDomain).toBe("example.news");
     expect(result?.whitelisted).toBe(false);
     expect(result?.articleConfidence).toBe(0.9);
   });
@@ -72,7 +73,46 @@ describe("extractArticle", () => {
     });
 
     expect(result?.author).toBe("John Lim");
-    expect(result?.publishDate).toBe("2026-08-30T10:00:00Z");
+    expect(result?.publishDate).toBe("2026-08-30T10:00:00.000Z");
+  });
+
+  it("normalizes a non-ISO fallback date string to ISO 8601", () => {
+    // Parsed in local time by Date, so assert shape rather than an exact
+    // instant -- pinning a value here would make the test timezone-dependent.
+    setPage(
+      `<article><div class="publish-date">September 1, 2026 12:00:00 GMT</div>${PARAGRAPHS}</article>`
+    );
+
+    const result = extractArticle(document, TEST_URL, {
+      whitelisted: false,
+      articleConfidence: 0.8,
+    });
+
+    expect(result?.publishDate).toBe("2026-09-01T12:00:00.000Z");
+  });
+
+  it("drops an unparseable date rather than forwarding a raw string", () => {
+    setPage(
+      `<article><div class="publish-date">not a real date</div>${PARAGRAPHS}</article>`
+    );
+
+    const result = extractArticle(document, TEST_URL, {
+      whitelisted: false,
+      articleConfidence: 0.8,
+    });
+
+    expect(result?.publishDate).toBeNull();
+  });
+
+  it("derives sourceDomain from the page URL's hostname", () => {
+    setPage(`<article><h1>Headline</h1>${PARAGRAPHS}</article>`);
+
+    const result = extractArticle(document, "https://www.example.news/story/123", {
+      whitelisted: false,
+      articleConfidence: 0.8,
+    });
+
+    expect(result?.sourceDomain).toBe("www.example.news");
   });
 
   it("includes content images and filters out small icons and tracking pixels", () => {

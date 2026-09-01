@@ -15,9 +15,16 @@ import { MOCK_ANALYSIS } from "./render/__mock__/mock-response";
 export interface AnalysisRequest {
   url: string;
   title?: string;
-  /** Cleaned article text from WS1 extraction, when available. */
+  /** Cleaned article text from WS1 extraction, when available. Maps
+   * straight onto backend ArticleInput.text -- must be sent byte-identical,
+   * no further reflow/whitespace collapsing after WS1 produces it, since
+   * WS5's claim char_start/char_end offsets index into exactly this string. */
   text?: string;
   images?: string[];
+  /** ISO 8601, maps onto ArticleInput.published_at. */
+  published_at?: string;
+  /** Hostname, e.g. "straitstimes.com". Maps onto ArticleInput.source_domain. */
+  source_domain?: string;
 }
 
 export const ANALYZE_MESSAGE = "dasfax:analyze";
