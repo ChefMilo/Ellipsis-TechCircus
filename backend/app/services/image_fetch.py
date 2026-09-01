@@ -39,7 +39,7 @@ _HEADERS = {"User-Agent": _USER_AGENT, "Accept": "image/*,*/*;q=0.8"}
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 
-def _build_ssl_context() -> ssl.SSLContext:
+def build_ssl_context() -> ssl.SSLContext:
     """TLS context with an explicit CA bundle.
 
     `urlopen` with no context uses OpenSSL's compiled-in CA paths, which on a python.org
@@ -57,7 +57,10 @@ def _build_ssl_context() -> ssl.SSLContext:
         return ssl.create_default_context()
 
 
-_SSL_CONTEXT = _build_ssl_context()
+# Public: the eval tooling fetches from Wikimedia with bare urllib and needs the same
+# trust store, or it hits the identical CERTIFICATE_VERIFY_FAILED wall.
+SSL_CONTEXT = build_ssl_context()
+_SSL_CONTEXT = SSL_CONTEXT
 
 # Decode target. Both candidate image checkpoints take 224x224 input, so decoding a 4000px
 # hero image at full resolution is pure waste — and it is real waste: full-size JPEG decode

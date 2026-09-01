@@ -25,7 +25,9 @@ pip install -r requirements-ml.txt         # the real models (~2.5GB; CPU wheels
 pytest -q                                  # 98 offline tests, no network, no weights
 pytest -m models                           # 8 more, needs the downloaded checkpoints
 
-python ws4_eval.py --backend huggingface   # the confusion matrix + threshold justification
+python ws4_eval.py --backend huggingface   # text confusion matrix + threshold justification
+python ws4_eval.py --images                # image detector accuracy, broken down by generator
+python ws4_eval.py --verify-labels         # which class index means "fake"
 python ws4_bench.py --with-images          # p95 latency; re-derives the budget
 uvicorn app.main:app                       # then POST to /tier2/screen
 ```
@@ -118,6 +120,46 @@ but its numbers are not probabilities, so any threshold between the modes behave
 identically. Do not over-claim precision about the exact value.
 
 ---
+
+## The image detector is the weak half — measured, not assumed
+
+`python ws4_eval.py --images` scores the real CNN against
+[eval/images_ood.json](eval/images_ood.json): 66 Wikimedia Commons images, AI-generated
+ones grouped **by generator**, evaluated at the 512px rendition the production fetch path
+actually produces (benchmarking pristine originals would overstate accuracy, because
+resampling destroys the high-frequency artifacts these detectors key on).
+
+Overall: **AUROC 0.821**, and at the 0.70 threshold recall 0.722, precision 0.812.
+That is materially worse than the text side, and the breakdown says why:
+
+| generator | n | recall | 95% interval |
+|---|---|---|---|
+| Grok | 6 | 1.000 | 0.61–1.00 |
+| Flux | 6 | 0.833 | 0.44–0.97 |
+| DALL·E | 8 | 0.750 | 0.41–0.93 |
+| Midjourney | 8 | 0.625 | 0.31–0.86 |
+| **Stable Diffusion** | 8 | **0.500** | 0.22–0.78 |
+
+**The checkpoint is called `sdxl-detector` and it is worst on Stable Diffusion.** The
+likely explanation is that Commons' Stable Diffusion category spans SD 1.x through SDXL
+and leans heavily on stylised art, while the detector was tuned on SDXL photorealism — but
+that is a hypothesis, and the intervals here overlap heavily at n=8. Do not quote a single
+aggregate for this model; the per-generator spread *is* the finding.
+
+Two limits that moving the threshold cannot fix:
+
+- **Six of thirty genuine photographs score above 0.95** — a 20% false-alarm rate that is
+  flat across every threshold from 0.60 to 0.95. Because escalation is OR (per §2.2), about
+  one page in five carrying real photos escalates on the image signal alone. That costs
+  Tier 3 compute, not user trust: images never render a badge. A plausible future fix is
+  requiring two or more flagged images per page, which this per-image manifest cannot
+  calibrate.
+- **Recall never reaches 0.90 at any threshold**, so the recall-first criterion that sets
+  the text threshold cannot be satisfied for images at all.
+
+Caveat on the corpus: Commons' AI categories contain a lot of illustration and digital art,
+not only photorealistic imagery. The deployment case that matters — a photorealistic fake
+in a news article — is under-represented, so treat these as a floor rather than an estimate.
 
 ## Latency
 

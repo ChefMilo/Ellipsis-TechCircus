@@ -231,6 +231,104 @@ def verify_labels(samples: list[dict]) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Image benchmark — the real CNN against real images, broken down by generator
+# --------------------------------------------------------------------------- #
+IMAGES_OOD = Path(__file__).parent / "eval" / "images_ood.json"
+
+
+def evaluate_images(target_recall: float) -> int:
+    """Score the real image detector on `eval/images_ood.json` and report per generator.
+
+    Per generator, not one aggregate, because `Organika/sdxl-detector` is SDXL-specialised:
+    an average over generators hides both its strength and where it is blind. "0.95 on SDXL,
+    0.61 on Midjourney" is the answer a judge can actually use.
+
+    Note the fetch: Wikimedia rejects the default agent with HTTP 400, so set
+    DASFAX_IMAGE_USER_AGENT to something with a contact before running this.
+    """
+    import time as _time
+
+    from app.clients.factory import make_image_scorer
+    from app.pipeline.ws4 import _FETCH_POOL
+    from app.services.image_fetch import MAX_IMAGE_BYTES, fetch_images
+
+    if not IMAGES_OOD.exists():
+        print(f"manifest not found: {IMAGES_OOD}\nRun: python eval/prepare_images.py", file=sys.stderr)
+        return 2
+
+    manifest = json.loads(IMAGES_OOD.read_text(encoding="utf-8"))
+    samples = manifest["samples"]
+    settings = get_settings()
+    scorer = make_image_scorer(settings, strict=True)
+    scorer.warmup()
+
+    print("=" * 80)
+    print("WS4 — AI-generated image detector: out-of-distribution accuracy")
+    print("=" * 80)
+    print(f"  checkpoint     {scorer.name}")
+    print(f"  manifest       {IMAGES_OOD.name} — {len(samples)} images from {manifest['meta']['source']}")
+    print(f"  rendition      {manifest['meta']['rendition']}")
+    print("  fetching...", flush=True)
+
+    urls = [s["image_url"] for s in samples]
+    started = _time.monotonic()
+    fetched = fetch_images(
+        urls, deadline=started + 300.0, per_request_timeout_s=15.0,
+        max_bytes=MAX_IMAGE_BYTES, pool=_FETCH_POOL,
+    )
+    risks = scorer.score_batch(fetched)
+
+    rows = []
+    unusable = 0
+    for sample, risk in zip(samples, risks, strict=True):
+        if not risk.scored:
+            unusable += 1
+            continue
+        rows.append((sample, risk.score, sample["label"] == "synthetic"))
+
+    print(f"  scored         {len(rows)}/{len(samples)} ({unusable} unfetchable or undecodable)\n")
+    if not rows:
+        print("  Nothing could be scored — check DASFAX_IMAGE_USER_AGENT and network.", file=sys.stderr)
+        return 2
+
+    scored = [(s, y) for _, s, y in rows]
+    print_sweep("IMAGE — real-vs-synthetic CNN", scored, settings.image_threshold)
+    print_distribution(scored)
+    shipped = confusion_at(scored, settings.image_threshold)
+    print_matrix(shipped, "synthetic", "authentic")
+
+    pick = choose_threshold(scored, target_recall)
+    print(f"\n  Shipped threshold  DASFAX_IMAGE_THRESHOLD = {settings.image_threshold:.2f}")
+    print(f"  Criterion picks    {pick.threshold:.2f} "
+          f"(precision {pick.precision:.3f}, recall {pick.recall:.3f})")
+
+    # --- the part that actually matters -------------------------------------- #
+    print("\n  Recall by generator (at the shipped threshold)")
+    print("    generator          n   detected   recall   95% interval")
+    print("    " + "-" * 58)
+    by_generator: dict[str, list[float]] = {}
+    for sample, score, is_synth in rows:
+        if is_synth:
+            by_generator.setdefault(sample.get("generator", "?"), []).append(score)
+    for generator, scores in sorted(by_generator.items(), key=lambda kv: -len(kv[1])):
+        hits = sum(1 for s in scores if s >= settings.image_threshold)
+        low, high = wilson_interval(hits, len(scores))
+        print(f"    {generator:<16} {len(scores):>3}   {hits:>8}   {hits / len(scores):>6.3f}   "
+              f"[{low:.2f}-{high:.2f}]")
+
+    real_scores = [s for _, s, y in rows if not y]
+    false_alarms = sum(1 for s in real_scores if s >= settings.image_threshold)
+    low, high = wilson_interval(false_alarms, len(real_scores))
+    print(f"\n    real photos      {len(real_scores):>3}   {false_alarms:>8} false alarms   "
+          f"FPR {false_alarms / len(real_scores):.3f} [{low:.2f}-{high:.2f}]")
+
+    print("\n" + "=" * 80)
+    print(f"  {manifest['meta']['caveat']}")
+    print("=" * 80 + "\n")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Reporting
 # --------------------------------------------------------------------------- #
 def print_sweep(title: str, scored: list[tuple[float, bool]], operating: float) -> None:
@@ -334,9 +432,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true", help="Print only the summary lines.")
     parser.add_argument("--verify-labels", action="store_true",
                         help="Establish which class index of the real checkpoint means 'fake'.")
+    parser.add_argument("--images", action="store_true",
+                        help="Evaluate the REAL image detector on eval/images_ood.json, by generator.")
     args = parser.parse_args(argv)
 
     settings = get_settings()
+
+    if args.images:
+        return evaluate_images(args.target_recall)
 
     if not DATASET.exists():
         print(f"dataset not found: {DATASET}", file=sys.stderr)

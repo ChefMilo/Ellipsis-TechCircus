@@ -1,0 +1,505 @@
+{
+  "meta": {
+    "name": "dasfax-ws4-images-ood-v1",
+    "source": "Wikimedia Commons",
+    "purpose": "Out-of-distribution accuracy for the Tier 2 AI-generated-image detector.",
+    "rendition": "512px thumbnails \u2014 matches what the production fetch path sees",
+    "caveat": "Commons AI categories contain a lot of illustration and digital art, not only photorealistic imagery. Read the per-generator table with that in mind: the deployment case that matters is a photorealistic fake in a news article.",
+    "counts": {
+      "synthetic": 40,
+      "authentic": 30
+    }
+  },
+  "samples": [
+    {
+      "id": "midjourney-000",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:'Greenwood Estates Vista City' by Midjourney.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/%27Greenwood_Estates_Vista_City%27_by_Midjourney.jpg/960px-%27Greenwood_Estates_Vista_City%27_by_Midjourney.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-001",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:'Night 898' fantasy past city by Midjourney.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/%27Night_898%27_fantasy_past_city_by_Midjourney.jpg/960px-%27Night_898%27_fantasy_past_city_by_Midjourney.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-002",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:'The Neighbourhood' scifi burough by AI.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/%27The_Neighbourhood%27_scifi_burough_by_AI.jpg/960px-%27The_Neighbourhood%27_scifi_burough_by_AI.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-003",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:1 Atlantis.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/1_Atlantis.png/960px-1_Atlantis.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-004",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:1 Zaanse Schans, Amsterdam.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/1_Zaanse_Schans%2C_Amsterdam.png/960px-1_Zaanse_Schans%2C_Amsterdam.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-005",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:1 sinapse orgasmo.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/1_sinapse_orgasmo.jpg/960px-1_sinapse_orgasmo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-006",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:2 Atlantis.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/2_Atlantis.png/960px-2_Atlantis.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "midjourney-007",
+      "label": "synthetic",
+      "generator": "midjourney",
+      "source_title": "File:53008369784 - Flickr - Magdalena Roeseler.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/53008369784_-_Flickr_-_Magdalena_Roeseler.jpg/960px-53008369784_-_Flickr_-_Magdalena_Roeseler.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-008",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:'Not exactly what I meant with nuclear mushroom, but I'll take it' (Stable Diffusion misgeneration).png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/%27Not_exactly_what_I_meant_with_nuclear_mushroom%2C_but_I%27ll_take_it%27_%28Stable_Diffusion_misgeneration%29.png/960px-%27Not_exactly_what_I_meant_with_nuclear_mushroom%2C_but_I%27ll_take_it%27_%28Stable_Diffusion_misgeneration%29.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-009",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:2023-03 AI images ZvD 01.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/2023-03_AI_images_ZvD_01.png/960px-2023-03_AI_images_ZvD_01.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-010",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:2023-11 SD Balloons and Wikipedia logo.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/2023-11_SD_Balloons_and_Wikipedia_logo.png/960px-2023-11_SD_Balloons_and_Wikipedia_logo.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-011",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:AI Artwork of Mountains.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/AI_Artwork_of_Mountains.jpg/960px-AI_Artwork_of_Mountains.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-012",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:AI deletionism.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/AI_deletionism.png/960px-AI_deletionism.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-013",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:AI generated Logo experiment.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/AI_generated_Logo_experiment.jpg/960px-AI_generated_Logo_experiment.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-014",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:AI generated Logo experiment 18a.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/AI_generated_Logo_experiment_18a.jpg/960px-AI_generated_Logo_experiment_18a.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "stable-diffusion-015",
+      "label": "synthetic",
+      "generator": "stable-diffusion",
+      "source_title": "File:AI golem waiting for tasks and providing advice.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/AI_golem_waiting_for_tasks_and_providing_advice.jpg/960px-AI_golem_waiting_for_tasks_and_providing_advice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-016",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:100 DAYS 100 EDITS 1 logo.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/100_DAYS_100_EDITS_1_logo.png/960px-100_DAYS_100_EDITS_1_logo.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-017",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:AI Sauna imagined by AI.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/AI_Sauna_imagined_by_AI.png/960px-AI_Sauna_imagined_by_AI.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-018",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:AI generated image of a cancer cell.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/AI_generated_image_of_a_cancer_cell.jpg/960px-AI_generated_image_of_a_cancer_cell.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-019",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:AI generated image of leukocytes.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/AI_generated_image_of_leukocytes.jpg/960px-AI_generated_image_of_leukocytes.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-020",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:AI render of light human skin texture.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/AI_render_of_light_human_skin_texture.jpg/960px-AI_render_of_light_human_skin_texture.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-021",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:A cenz\u00far\u00e1t ki\u00e1lt\u00f3 szerkeszt\u0151.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/A_cenz%C3%BAr%C3%A1t_ki%C3%A1lt%C3%B3_szerkeszt%C5%91.png/960px-A_cenz%C3%BAr%C3%A1t_ki%C3%A1lt%C3%B3_szerkeszt%C5%91.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-022",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:A golden skin lady wearing ornamental heads and golden ornaments on her body standing in a lake.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/A_golden_skin_lady_wearing_ornamental_heads_and_golden_ornaments_on_her_body_standing_in_a_lake.jpg/960px-A_golden_skin_lady_wearing_ornamental_heads_and_golden_ornaments_on_her_body_standing_in_a_lake.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "dall-e-023",
+      "label": "synthetic",
+      "generator": "dall-e",
+      "source_title": "File:A hawk sits atop a puzzle globe.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/A_hawk_sits_atop_a_puzzle_globe.png/960px-A_hawk_sits_atop_a_puzzle_globe.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "flux-024",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:A WikiDragon conducting serious business editing Wikipedia.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/A_WikiDragon_conducting_serious_business_editing_Wikipedia.png/960px-A_WikiDragon_conducting_serious_business_editing_Wikipedia.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "flux-025",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:A cat sitting in front of PC (Wikipedia open).jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/A_cat_sitting_in_front_of_PC_%28Wikipedia_open%29.jpg/960px-A_cat_sitting_in_front_of_PC_%28Wikipedia_open%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "flux-026",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:A professional photoshoot show a anthropomorphic rhinoceros wearing business suit standing in front of the cinema near the Broadway, New York City. The cinema had a marquee at the entrance with the text \"NOW SHOWING FLUX 1.0\".png",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/0/04/A_professional_photoshoot_show_a_anthropomorphic_rhinoceros_wearing_business_suit_standing_in_front_of_the_cinema_near_the_Broadway%2C_New_York_City._The_cinema_had_a_marquee_at_the_entrance_with_the_text_%22NOW_SHOWING_FLUX_1.0%22.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+    },
+    {
+      "id": "flux-027",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:Ancient astronauts.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Ancient_astronauts.png/960px-Ancient_astronauts.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "flux-028",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:CyberCosmicMan (FLUX.1 Schnell).jpg",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/f/f6/CyberCosmicMan_%28FLUX.1_Schnell%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+    },
+    {
+      "id": "flux-029",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:Disaster Girl meme.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Disaster_Girl_meme.png/960px-Disaster_Girl_meme.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "flux-030",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:Dragon Encounter During Sunset (FLUX 1.1 Pro Ultra).webp",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Dragon_Encounter_During_Sunset_%28FLUX_1.1_Pro_Ultra%29.webp/960px-Dragon_Encounter_During_Sunset_%28FLUX_1.1_Pro_Ultra%29.webp.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "flux-031",
+      "label": "synthetic",
+      "generator": "flux",
+      "source_title": "File:FLUX P2-2.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/FLUX_P2-2.png/960px-FLUX_P2-2.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "grok-032",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Asahara-Shinzo.png",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Asahara-Shinzo.png/960px-Asahara-Shinzo.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "grok-033",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Astronaut Riding a Horse (Grok Aurora).webp",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/be/Astronaut_Riding_a_Horse_%28Grok_Aurora%29.webp/960px-Astronaut_Riding_a_Horse_%28Grok_Aurora%29.webp.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "grok-034",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Boghveden Andersen AI Grok 2025 Gryka.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Boghveden_Andersen_AI_Grok_2025_Gryka.jpg/960px-Boghveden_Andersen_AI_Grok_2025_Gryka.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "grok-035",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Cybertruck by xAI Aurora (AI generated photo).jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Cybertruck_by_xAI_Aurora_%28AI_generated_photo%29.jpg/960px-Cybertruck_by_xAI_Aurora_%28AI_generated_photo%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "grok-036",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Great Sea Serpent Andersen literary fairy tale.jpg",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/4/40/Great_Sea_Serpent_Andersen_literary_fairy_tale.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+    },
+    {
+      "id": "grok-037",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Grok-human.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Grok-human.jpg/960px-Grok-human.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "grok-038",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Grok toaster bikini.jpg",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/7/7f/Grok_toaster_bikini.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+    },
+    {
+      "id": "grok-039",
+      "label": "synthetic",
+      "generator": "grok",
+      "source_title": "File:Image of a Library by Grok.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Image_of_a_Library_by_Grok.jpg/960px-Image_of_a_Library_by_Grok.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-000",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:(Man) Chest tattoo. Monument to Yuri Gagarin (astronaut) in Moscow. Color.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/%28Man%29_Chest_tattoo._Monument_to_Yuri_Gagarin_%28astronaut%29_in_Moscow._Color.jpg/960px-%28Man%29_Chest_tattoo._Monument_to_Yuri_Gagarin_%28astronaut%29_in_Moscow._Color.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-001",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:(Man) Chest tattoo. Monument to Yuri Gagarin (astronaut) in Moscow -1. Black and White.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/%28Man%29_Chest_tattoo._Monument_to_Yuri_Gagarin_%28astronaut%29_in_Moscow_-1._Black_and_White.jpg/960px-%28Man%29_Chest_tattoo._Monument_to_Yuri_Gagarin_%28astronaut%29_in_Moscow_-1._Black_and_White.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-002",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:02020 0028 (2) Equality March 2020 in Katowice.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/02020_0028_%282%29_Equality_March_2020_in_Katowice.jpg/960px-02020_0028_%282%29_Equality_March_2020_in_Katowice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-003",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:02020 0265 (2) Equality March 2020 in Katowice, Marsz R\u00f3wno\u015bci w Katowicach.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/02020_0265_%282%29_Equality_March_2020_in_Katowice%2C_Marsz_R%C3%B3wno%C5%9Bci_w_Katowicach.jpg/960px-02020_0265_%282%29_Equality_March_2020_in_Katowice%2C_Marsz_R%C3%B3wno%C5%9Bci_w_Katowicach.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-004",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:02020 0370 (2) Equality March 2020 in Katowice.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/02020_0370_%282%29_Equality_March_2020_in_Katowice.jpg/960px-02020_0370_%282%29_Equality_March_2020_in_Katowice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-005",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:0403 Prayers Colors Kathmandu Bodnath 2006 Luca Galuzzi.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/0403_Prayers_Colors_Kathmandu_Bodnath_2006_Luca_Galuzzi.jpg/960px-0403_Prayers_Colors_Kathmandu_Bodnath_2006_Luca_Galuzzi.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-006",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:0514 Seeking Shadow Kathmandu Bodnath 2006 Luca Galuzzi.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/0514_Seeking_Shadow_Kathmandu_Bodnath_2006_Luca_Galuzzi.jpg/960px-0514_Seeking_Shadow_Kathmandu_Bodnath_2006_Luca_Galuzzi.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-007",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:1. SC Sollenau vs. FC Red Bull Salzburg 2014-07-12 (084).jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/1._SC_Sollenau_vs._FC_Red_Bull_Salzburg_2014-07-12_%28084%29.jpg/960px-1._SC_Sollenau_vs._FC_Red_Bull_Salzburg_2014-07-12_%28084%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-008",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:100 Years of Poland Regaining Independence in \u0141\u00f3d\u017a 2018-11-11 09.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/100_Years_of_Poland_Regaining_Independence_in_%C5%81%C3%B3d%C5%BA_2018-11-11_09.jpg/960px-100_Years_of_Poland_Regaining_Independence_in_%C5%81%C3%B3d%C5%BA_2018-11-11_09.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-people-009",
+      "label": "authentic",
+      "generator": "photo-people",
+      "source_title": "File:12-06-05-aut-rom-freundschaftsspiel-468.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/12-06-05-aut-rom-freundschaftsspiel-468.jpg/960px-12-06-05-aut-rom-freundschaftsspiel-468.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-010",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:003 2016 11 30 Allee.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/003_2016_11_30_Allee.jpg/960px-003_2016_11_30_Allee.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-011",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:0490 Bridge of Brodgar - Stennes watch stone E.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/0490_Bridge_of_Brodgar_-_Stennes_watch_stone_E.jpg/960px-0490_Bridge_of_Brodgar_-_Stennes_watch_stone_E.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-012",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:122 mm Projectile of MRL.JPG",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/122_mm_Projectile_of_MRL.JPG/960px-122_mm_Projectile_of_MRL.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-013",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:13-08-11-hongkong-by-RalfR-001.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/13-08-11-hongkong-by-RalfR-001.jpg/960px-13-08-11-hongkong-by-RalfR-001.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-014",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:13-10-18 Lightpainting 01.JPG",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/13-10-18_Lightpainting_01.JPG/960px-13-10-18_Lightpainting_01.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-015",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:14-08-13-Helsinki-Kanu-RalfR-N3S 1108-077.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/14-08-13-Helsinki-Kanu-RalfR-N3S_1108-077.jpg/960px-14-08-13-Helsinki-Kanu-RalfR-N3S_1108-077.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-016",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:1580 Lucas Janszoon Waghenaer Carte de l'ouest de la bretagne.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/1580_Lucas_Janszoon_Waghenaer_Carte_de_l%27ouest_de_la_bretagne.jpg/960px-1580_Lucas_Janszoon_Waghenaer_Carte_de_l%27ouest_de_la_bretagne.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-017",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:16-02-22-Sa-Pobla-Mallorca-RalfR RR26408.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/16-02-22-Sa-Pobla-Mallorca-RalfR_RR26408.jpg/960px-16-02-22-Sa-Pobla-Mallorca-RalfR_RR26408.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-018",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:16-08-28-Schlo\u00df Rund\u0101le-RR2 2578.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/16-08-28-Schlo%C3%9F_Rund%C4%81le-RR2_2578.jpg/960px-16-08-28-Schlo%C3%9F_Rund%C4%81le-RR2_2578.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-objects-019",
+      "label": "authentic",
+      "generator": "photo-objects",
+      "source_title": "File:17-12-03-Cerdanyola-RalfR-DSCF0595-HDR.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/17-12-03-Cerdanyola-RalfR-DSCF0595-HDR.jpg/960px-17-12-03-Cerdanyola-RalfR-DSCF0595-HDR.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-020",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:003 2020 06 16 Do it yourself.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/003_2020_06_16_Do_it_yourself.jpg/960px-003_2020_06_16_Do_it_yourself.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-021",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:16-03-31-Hebron-Altstadt-RalfR-WAT 5721.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/16-03-31-Hebron-Altstadt-RalfR-WAT_5721.jpg/960px-16-03-31-Hebron-Altstadt-RalfR-WAT_5721.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-022",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:2012-10-13 21-06-32-auto-light-trails.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/2012-10-13_21-06-32-auto-light-trails.jpg/960px-2012-10-13_21-06-32-auto-light-trails.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-023",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:2012-11-14 17-51-09-file-auto.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/2012-11-14_17-51-09-file-auto.jpg/960px-2012-11-14_17-51-09-file-auto.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-024",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:2013-12-12 18-45-36 lumieres-noel-belfort.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/2013-12-12_18-45-36_lumieres-noel-belfort.jpg/960px-2013-12-12_18-45-36_lumieres-noel-belfort.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-025",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:2013-12-12 19-05-33 lumieres-noel-belfort.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/2013-12-12_19-05-33_lumieres-noel-belfort.jpg/960px-2013-12-12_19-05-33_lumieres-noel-belfort.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-026",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:2013-cable-trolley.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/2013-cable-trolley.jpg/960px-2013-cable-trolley.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-027",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:2016-07-03-ColognePride 2016-5226.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/2016-07-03-ColognePride_2016-5226.jpg/960px-2016-07-03-ColognePride_2016-5226.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-028",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:20181105 BR296 ZBAHalleNord DSC09364-2 PtrQs.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/20181105_BR296_ZBAHalleNord_DSC09364-2_PtrQs.jpg/960px-20181105_BR296_ZBAHalleNord_DSC09364-2_PtrQs.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    },
+    {
+      "id": "photo-vehicles-029",
+      "label": "authentic",
+      "generator": "photo-vehicles",
+      "source_title": "File:AIDAperla in Rotterdam - September 2019.jpg",
+      "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/AIDAperla_in_Rotterdam_-_September_2019.jpg/960px-AIDAperla_in_Rotterdam_-_September_2019.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+    }
+  ]
+}

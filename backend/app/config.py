@@ -101,10 +101,22 @@ class Settings:
     # Two more of eight hard fakes caught, for 3.3pp more false escalation. The aggregate
     # hides this because every easy case is caught at any threshold.
     text_threshold: float = 0.40
-    # The image figure is NOT comparably grounded: the bundled image corpus only exercises
-    # the URL-marker fallback, where every marker scores 0.92 and everything else 0.10, so
-    # any threshold in between scores identically. Re-derive it against the real CNN on a
-    # real image set before quoting it.
+    # Image threshold, measured against the real CNN on 66 Wikimedia images:
+    #
+    #   python ws4_eval.py --images
+    #   overall AUROC 0.821 | at 0.70: recall 0.722, precision 0.812, FPR 0.200
+    #
+    # 0.70 sits in the middle of a plateau: recall is flat at 0.722 from 0.30 to 0.80 and
+    # FPR is flat at 0.200 from 0.60 to 0.95, so anything in 0.60-0.80 behaves identically.
+    # Dropping to 0.25 buys 2.8pp recall for 10pp more false alarms — a bad trade.
+    #
+    # TWO THINGS TO KNOW, neither fixable by moving this number:
+    #  1. Six of thirty genuine photographs score above 0.95. The false-positive rate is
+    #     not a threshold problem; it is the model. Because escalation is OR (per §2.2),
+    #     roughly one page in five carrying real photos escalates on the image signal
+    #     alone. That costs Tier 3 compute, not user trust — images never render a badge.
+    #  2. Recall never reaches 0.90 at ANY threshold, so the recall-first criterion used
+    #     for text cannot be satisfied here at all.
     image_threshold: float = 0.70
 
     # Real model checkpoints (read unless screening_mode="heuristic").
