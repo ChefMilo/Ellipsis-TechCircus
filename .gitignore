@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+CLAUDE.local.md
+
+# Node / extension build
+node_modules/
+extension/service-worker.js
+npm-debug.log*
+*.tsbuildinfo

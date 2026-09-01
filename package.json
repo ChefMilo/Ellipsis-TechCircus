@@ -1,0 +1,19 @@
+{
+  "name": "ellipsis-techcircus-ws1",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WS1 - Extension Shell & Page Triage (Chrome MV3 fact-checking extension)",
+  "scripts": {
+    "build": "esbuild src/background/service-worker.ts --bundle --format=esm --outfile=extension/service-worker.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Ellipsis Fact-Check Triage (WS1 dev build)",
+  "version": "0.1.0",
+  "description": "Tier 0/1 page triage for a fact-checking extension: decides whether a page is worth checking before any backend call fires.",
+  "permissions": ["tabs"],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  }
+}
