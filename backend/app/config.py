@@ -28,6 +28,7 @@ class Settings:
     # Which backends to use. "mock" (default) needs no keys.
     llm_provider: str = os.environ.get("DASFAX_LLM_PROVIDER", "mock")        # mock | openai
     search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily
+    assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock (WS6; real provider TBD)
 
     # Credentials (only read by the real providers).
     openai_api_key: str | None = os.environ.get("OPENAI_API_KEY")

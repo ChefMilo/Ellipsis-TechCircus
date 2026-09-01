@@ -108,17 +108,38 @@ def test_analyze_returns_a_valid_envelope(analyzed: dict):
     assert analyzed["errors"] == []
 
 
-def test_analyze_returns_claims_with_null_assessments(analyzed: dict):
+def test_analyze_returns_claims_with_real_assessments(analyzed: dict):
+    # Was: assessments had to be null (pre-WS6). WS6 now fills them.
     assert analyzed["verifiedClaims"], "expected claims from the sample article"
     for vc in analyzed["verifiedClaims"]:
         assert set(vc) == {"claim", "assessment"}
-        assert vc["assessment"] is None, "WS6 does not exist yet; assessments must be null"
+        assessment = vc["assessment"]
+        assert assessment is not None, "WS6 should have assessed this claim"
+        assert assessment["claim_id"] == vc["claim"]["id"]
+        assert assessment["status"] in ASSESSMENT_STATUSES
+        assert assessment["explanation"].strip()
+        # §2.5, over the wire: an affirmative verdict always carries a citation.
+        if assessment["status"] in {"supported", "partially_supported", "contradicted"}:
+            assert assessment["citations"], f"{assessment['status']} with no citation"
+        for citation in assessment["citations"]:
+            assert citation["source_url"] in {e["source_url"] for e in vc["claim"]["evidence"]}
 
 
-def test_article_verdict_is_the_documented_placeholder(analyzed: dict):
+def test_article_verdict_is_computed_from_the_assessments(analyzed: dict):
+    # Was: asserted the pre-WS6 placeholder verdict. The rollup is real now.
     verdict = analyzed["articleVerdict"]
-    assert verdict["level"] == PENDING_VERDICT_LEVEL.value
-    assert verdict["summary"] == PENDING_VERDICT_SUMMARY
+    assert verdict["level"] in VERDICT_LEVELS
+    assert verdict["summary"] != PENDING_VERDICT_SUMMARY, "should no longer be the placeholder"
+
+    statuses = [vc["assessment"]["status"] for vc in analyzed["verifiedClaims"]]
+    if "contradicted" in statuses:
+        assert verdict["level"] == "high_risk"
+    elif "partially_supported" in statuses:
+        assert verdict["level"] == "caution"
+    elif "supported" in statuses:
+        assert verdict["level"] == "ok"
+    else:
+        assert verdict["level"] != "ok", "never OK when nothing was supported"
 
 
 def test_envelope_claims_match_run_ws5_output(article_text: str, analyzed: dict):
@@ -234,3 +255,28 @@ def test_cors_header_present_on_the_actual_response():
     )
     assert r.status_code == 200
     assert r.headers.get("access-control-allow-origin") is not None
+
+
+# --------------------------------------------------------------------------- #
+# WS6 assessment over the wire
+# --------------------------------------------------------------------------- #
+def test_assessed_envelope_still_passes_the_ws2_guard(analyzed: dict):
+    # The guard validates assessments too (isVerifiedClaim -> isAssessment); populating
+    # them must not break it.
+    assert_passes_ws2_guard(analyzed)
+    assert all(vc["assessment"] is not None for vc in analyzed["verifiedClaims"])
+
+
+def test_analyze_is_deterministic(article_text: str):
+    payload = {"url": "https://news.example.org/sg/x", "text": article_text}
+    first = client.post("/analyze", json=payload).json()
+    second = client.post("/analyze", json=payload).json()
+    assert first == second
+
+
+def test_no_content_envelope_is_never_a_clean_bill_of_health():
+    body = client.post("/analyze", json={"url": "https://news.example.org/x"}).json()
+    assert body["verifiedClaims"] == []
+    # Nothing was checked, so the pill must not read as "ok".
+    assert body["articleVerdict"]["level"] != "ok"
+    assert body["articleVerdict"]["summary"] == PENDING_VERDICT_SUMMARY

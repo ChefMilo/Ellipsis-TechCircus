@@ -5,8 +5,8 @@ Two endpoints, deliberately layered:
   POST /tier3/claims  — WS5's own output (`ClaimExtractionResult`): claims, stats,
                         provenance. The shape WS6 will consume. Unchanged.
   POST /analyze       — the CLIENT-facing envelope (`AnalysisResponse`) the extension
-                        renders, i.e. /tier3/claims wrapped for WS2. This is what the
-                        service worker fetches.
+                        renders: /tier3/claims run through WS6 assessment and wrapped for
+                        WS2. This is what the service worker fetches.
 
 Splitting them keeps WS5's result honest (stats/provenance stay visible for the pitch)
 while giving WS2 exactly the shape its guard accepts. Tier 0/1 routing still lives in the
@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.clients.factory import make_assessor_client
 from app.config import get_settings
 from app.models.contract import (
     AnalysisError,
@@ -30,6 +31,7 @@ from app.models.contract import (
     ClaimExtractionResult,
 )
 from app.pipeline.ws5 import run_ws5
+from app.services.assessment import assess_claims
 from app.services.envelope import pending_verdict, to_analysis_response
 
 app = FastAPI(
@@ -83,8 +85,8 @@ def _domain_of(url: str) -> str | None:
 def analyze(request: AnalysisRequest) -> AnalysisResponse:
     """Client-facing analysis for one page — the endpoint the extension calls.
 
-    Returns the `AnalysisResponse` envelope WS2 renders. Assessments are null until WS6
-    exists; WS2 renders unassessed claims with its "not yet verified" treatment.
+    Returns the `AnalysisResponse` envelope WS2 renders, with a WS6 assessment per claim
+    and an article-level verdict rolled up from those assessments.
 
     A request with no body text is NOT an error: it answers with a valid, empty envelope
     so WS3 can wire and exercise the fetch before WS1 forwards extracted text. This path
@@ -116,4 +118,15 @@ def analyze(request: AnalysisRequest) -> AnalysisResponse:
         text=request.text,
         source_domain=_domain_of(request.url),
     )
-    return to_analysis_response(run_ws5(article), status=AnalysisStatus.COMPLETE)
+    result = run_ws5(article)
+
+    # WS6: judge each claim against the evidence WS5 retrieved for it. Mock-backed by
+    # default (no API key), same as extraction and search. The backend name goes into
+    # model_meta alongside the others so provenance stays honest — the default
+    # "mock-assessor-stance-fixture-v1" is a rendering fixture, not real assessment.
+    assessor = make_assessor_client()
+    assessments = assess_claims(result.claims, client=assessor)
+    result.model_meta["assessor_backend"] = assessor.name
+    return to_analysis_response(
+        result, status=AnalysisStatus.COMPLETE, assessments=assessments
+    )
