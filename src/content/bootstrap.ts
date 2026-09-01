@@ -38,6 +38,10 @@ function startFactCheck(): void {
   if (extracted) {
     console.log("[WS1 Tier2] extracted article:", extracted);
   } else {
+    // `text` is optional on this endpoint: POST /analyze tolerates a
+    // missing body and returns a 200 with errors: [{ code: "no_content" }],
+    // not a validation error -- confirmed with WS3 2026-09-01. WS2's panel
+    // can key off that code for a "couldn't read this page" state.
     console.log(
       "[WS1 Tier2] Readability could not extract content -- sending url/title only"
     );
