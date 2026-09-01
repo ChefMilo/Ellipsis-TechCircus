@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -177,3 +178,82 @@ class VerifiedClaim(BaseModel):
 
     claim: Claim
     assessment: Assessment | None = None
+
+
+# --------------------------------------------------------------------------- #
+# Client envelope (backend -> WS2)
+#
+# MIRRORS src/shared/contract.ts, where WS2 authored these shapes first as its
+# own "client envelope". Now that the backend actually produces them, THIS file
+# is the source of truth for the envelope too — Darren / Terry, sync
+# src/shared/contract.ts from here and drop its "proposed to WS3" caveat.
+#
+# Field names are camelCase ON PURPOSE: they are the literal wire format WS2's
+# isAnalysisResponse() guard checks. Renaming them to snake_case breaks the
+# renderer silently (the guard returns false and the response is dropped).
+# --------------------------------------------------------------------------- #
+class AnalysisStatus(StrEnum):
+    """WS2's `AnalysisStatus` union, verbatim."""
+
+    COMPLETE = "complete"
+    PROCESSING = "processing"
+    FAILED = "failed"
+    SKIPPED = "skipped"      # Tier 0 trusted source -> WS2 renders the "trusted" pill
+
+
+class ArticleVerdictLevel(StrEnum):
+    """WS2's `ArticleVerdictLevel` union, verbatim.
+
+    NOTE: there is deliberately no "unrated"/"pending" member. Until WS6 exists the
+    backend has no article-level judgement to report, so it sends the most neutral
+    value in the union (OK) and says so in `ArticleVerdict.summary`. See
+    app/services/envelope.py.
+    """
+
+    TRUSTED = "trusted"
+    OK = "ok"
+    CAUTION = "caution"
+    HIGH_RISK = "high_risk"
+
+
+class ArticleVerdict(BaseModel):
+    """Article-level rollup shown on WS2's summary pill and at the top of the panel."""
+
+    level: ArticleVerdictLevel
+    summary: str
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+
+
+class AnalysisError(BaseModel):
+    """Non-fatal problem to surface alongside a still-valid envelope."""
+
+    code: str
+    message: str
+
+
+class AnalysisRequest(BaseModel):
+    """What the extension POSTs to /analyze.
+
+    `text` is OPTIONAL so WS3 can wire and test the fetch before WS1 forwards
+    extracted body text; the endpoint answers with a valid empty envelope until it
+    arrives, and lights up on its own once it does.
+    """
+
+    url: str = Field(..., description="Canonical URL of the page being analyzed.")
+    title: str | None = Field(None, description="Page/article title, if the content script has one.")
+    text: str | None = Field(None, description="Cleaned article body text (WS1 `bodyText`). Absent until WS1 forwards it.")
+    images: list[str] | None = Field(None, description="Article image URLs. Unused by WS5 today; carried for WS6.")
+
+
+class AnalysisResponse(BaseModel):
+    """The client-facing envelope WS2 renders. Must satisfy isAnalysisResponse()."""
+
+    schemaVersion: Literal["1.0"] = "1.0"
+    url: str
+    status: AnalysisStatus
+    articleVerdict: ArticleVerdict
+    verifiedClaims: list[VerifiedClaim] = Field(default_factory=list)
+    # WS2 types this `errors?: AnalysisError[]`; `null` is not a member of that type,
+    # so default to an empty list. Do not switch this model to exclude_none — that
+    # would also drop `assessment: null`, which WS2's isVerifiedClaim() requires.
+    errors: list[AnalysisError] = Field(default_factory=list)
