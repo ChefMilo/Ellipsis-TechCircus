@@ -192,6 +192,55 @@ identically. Do not over-claim precision about the exact value.
 
 ---
 
+## Read this first: what the classifier actually discriminates
+
+The first real page ever tested through the live extension was a local South African
+story about a **chilli-eating contest**. The classifier scored it **0.999** — as
+confidently fake as the deliberately sensational samples in our corpus. Every 120-word
+chunk of it scored 0.998–0.9997, including the neutral list of prize sponsors.
+
+The heuristic fallback — the "primitive" one — scored the same article **0.127**, and was
+right.
+
+A controlled probe explains it. Same facts, different framings:
+
+| text | score |
+|---|---|
+| Institutional hard news: "The agency said… According to the agency… A spokesperson said…" | **0.022** |
+| Same facts in community-event register | 0.988 |
+| Neutral prose, South African names and Rand amounts | 0.882 |
+| **Identical prose with US names and dollar amounts** | **0.990** |
+| Formal wire register, but about a chilli contest | 0.831 |
+
+It is **not** geography or domain shift — the US-markers version scored *higher* than the
+South African one. What the model has learned is closer to:
+
+> text that looks like attributed institutional hard news = REAL; everything else = FAKE.
+
+Soft news, lifestyle, community events, sport and entertainment all read as fake to it,
+regardless of truth. Chunking does not help — every chunk of a benign article scores 0.999.
+
+### This invalidates part of our own benchmark
+
+Every "real" sample in `eval/heldout_dataset.json` was hand-written by me in exactly that
+institutional register — ministries, police, agencies, "according to". Every "fake" sample
+was sensational. **So the reported AUROC of 0.947 largely measures institutional-register
+versus sensational-register, not real versus fake.** The corpus and the model share a bias,
+and the corpus therefore could not detect it.
+
+The signs were already in the results and I read them too narrowly: the false positives at
+the operating threshold were the opinion column (0.907) and the product recall notice
+(0.937) — the two "real" samples written in a non-institutional register.
+
+**Consequence for the product:** as a gate on general browsing this would escalate most
+non-hard-news pages. Once WS6 renders verdicts, users would see flags on chilli-eating
+contests. The number to trust is not 0.947; it is closer to the hard-subset 0.766, and even
+that is measured on a corpus with the same blind spot.
+
+**Cheapest mitigation to evaluate next:** the heuristic scored this correctly, so requiring
+both signals to agree before escalating would have caught it. That trades recall for
+precision and needs measuring, not assuming — but it is a concrete, testable lead.
+
 ## The text classifier is a register detector, not a claim detector
 
 **This is the most important limitation in WS4, and it goes to the product's premise.**
