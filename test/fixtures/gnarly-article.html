@@ -1,0 +1,49 @@
+<!--
+  Synthetic fixture that reproduces the DOM shapes that break naive indexOf:
+  sentences split across <span>/<a>, NBSP + newline whitespace, an inline <sup>
+  footnote mid-sentence, a figure caption and a "related" nav that must be
+  ignored, and one paragraph appended later to simulate lazy loading.
+  Drop a real Straits Times / CNA article body in alongside this to widen
+  coverage — the anchor tests iterate every *.html in this folder.
+-->
+<div id="page">
+  <nav class="site-nav">Home World Singapore Business Sport</nav>
+  <article>
+    <h1>Singapore Reports Sharp Rise in Impersonation Scam Losses in 2025</h1>
+    <p class="byline">By A. Reporter&nbsp;&nbsp;·&nbsp;&nbsp;<time datetime="2026-02-01">1 Feb 2026</time></p>
+
+    <p>Singapore recorded <strong>3,363 cases</strong> of
+      government-official-impersonation scams in 2025, up from
+      <span>1,504&nbsp;cases</span> in 2024.</p>
+
+    <p>Victims lost a total of
+      <span class="hl">S$242.9&nbsp;million</span> to these scams last year,
+      with an average loss of S$72,229 per&nbsp;victim.</p>
+
+    <p>In one widely reported case, a Singapore businessman lost
+      <a href="/money">S$4.9&nbsp;million</a> after joining a Zoom call in which
+      artificial intelligence<sup><a href="#fn1">1</a></sup> was used to fabricate
+      the likenesses of senior officials.</p>
+
+    <p>The Singapore Police Force warned that deepfake AI fabrications can be
+      sophisticated and difficult to distinguish from authentic&nbsp;content.</p>
+
+    <figure>
+      <img src="/img/scam.jpg" alt="">
+      <figcaption>Losses to impersonation scams more than doubled year on year.</figcaption>
+    </figure>
+
+    <p>According to a study, 79&nbsp;per&nbsp;cent of Singaporeans are confident
+      they can spot fake news.</p>
+
+    <p>Honestly, this is the most alarming trend I have seen in years, and the
+      authorities should do much more to stop it.</p>
+  </article>
+
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>
+      <li><a href="/a">Businessman loses S$4.9 million in a different scam</a></li>
+    </ul>
+  </aside>
+</div>
