@@ -329,6 +329,66 @@ def evaluate_images(target_recall: float) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Real-news false-positive benchmark — the one that disqualified every public checkpoint
+# --------------------------------------------------------------------------- #
+def evaluate_realnews(per_category: int = 120) -> int:
+    """Measure how often a backend flags GENUINE news as fake, broken down by category.
+
+    This is the benchmark that matters most for a gate, and the one our hand-written
+    corpus could not provide: every "real" sample in it was written in the same
+    institutional register the models happen to like, so the corpus and the models shared
+    a blind spot. AG News supplies real reporting across World / Sports / Business /
+    Sci-Tech, which exposes it immediately.
+
+    Reference figures at threshold 0.40:
+        omykhailiv 83.1% | Pulk17 61.7% | hamzab 55.2% | heuristic 0.0%
+    """
+    import random as _random
+
+    from datasets import load_dataset
+
+    settings = get_settings()
+    score_text, backend_name, _ = build_text_scorer(
+        "huggingface" if settings.screening_mode != "heuristic" else "heuristic"
+    )
+
+    data = load_dataset("fancyzhx/ag_news", split="test")
+    names = data.features["label"].names
+    labels = data["label"]
+    rng = _random.Random(7)
+
+    print("=" * 80)
+    print("WS4 — false-positive rate on REAL news, by content type")
+    print("=" * 80)
+    print(f"  backend        {backend_name}")
+    print(f"  threshold      {settings.text_threshold:.2f}")
+    print(f"  corpus         AG News test split, {per_category} per category\n")
+    print("  category      n   flagged as fake   95% interval")
+    print("  " + "-" * 54)
+
+    total_flagged = total = 0
+    for index, name in enumerate(names):
+        pool = [i for i, lab in enumerate(labels) if lab == index]
+        picks = rng.sample(pool, min(per_category, len(pool)))
+        scores = [score_text(None, data[i]["text"]) for i in picks]
+        flagged = sum(1 for s in scores if s >= settings.text_threshold)
+        low, high = wilson_interval(flagged, len(picks))
+        total_flagged += flagged
+        total += len(picks)
+        print(f"  {name:<10} {len(picks):>4}   {flagged:>6}  {flagged / len(picks):>6.1%}   [{low:.1%}-{high:.1%}]")
+
+    low, high = wilson_interval(total_flagged, total)
+    print("  " + "-" * 54)
+    print(f"  {'ALL':<10} {total:>4}   {total_flagged:>6}  {total_flagged / total:>6.1%}   [{low:.1%}-{high:.1%}]")
+    print(
+        "\n  A gate that flags a large share of real news is not a gate: it escalates almost\n"
+        "  everything, removing the cost rationale for the cascade, and once WS6 renders\n"
+        "  verdicts it puts warnings on ordinary journalism.\n"
+    )
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Reporting
 # --------------------------------------------------------------------------- #
 def print_sweep(title: str, scored: list[tuple[float, bool]], operating: float) -> None:
@@ -434,12 +494,17 @@ def main(argv: list[str] | None = None) -> int:
                         help="Establish which class index of the real checkpoint means 'fake'.")
     parser.add_argument("--images", action="store_true",
                         help="Evaluate the REAL image detector on eval/images_ood.json, by generator.")
+    parser.add_argument("--realnews", action="store_true",
+                        help="False-positive rate on genuine news, by content type (AG News).")
     args = parser.parse_args(argv)
 
     settings = get_settings()
 
     if args.images:
         return evaluate_images(args.target_recall)
+
+    if args.realnews:
+        return evaluate_realnews()
 
     if not DATASET.exists():
         print(f"dataset not found: {DATASET}", file=sys.stderr)
