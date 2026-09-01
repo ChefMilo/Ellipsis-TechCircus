@@ -41,8 +41,45 @@ not only in an individual response.
 
 | | Model | Notes |
 |---|---|---|
-| Text | `omykhailiv/bert-fake-news-recognition` | Fine-tuned BERT, used as-is (the brief says do not fine-tune from scratch). |
-| Image | `Organika/sdxl-detector` | **Swin-tiny, not EfficientNet-B4.** The proposal says "EfficientNet-B4-based *or alternative*", so this is in spec — but say it out loud. It is also SDXL-specialised, so report per-generator accuracy, never one aggregate. |
+| Text | `omykhailiv/bert-fake-news-recognition` | `bert-base-uncased` fine-tuned on **two datasets the author never names**. See the provenance warning below — this is not the model the proposal describes. |
+| Image | `Organika/sdxl-detector` | **Swin-tiny, not EfficientNet-B4** (in spec under "or alternative", but say it out loud). Fine-tuned from `umm-maybe/AI-image-detector` on Wikimedia↔SDXL pairs. **Licence is CC-BY-NC-3.0 — non-commercial only.** |
+
+### Provenance warning: read this before quoting the text model
+
+Straight from the model card, all of which conflicts with how we use it:
+
+- **"Predicts whether the news article's *title* is fake or real."** It is a headline
+  classifier by its author's own description, not an article-text classifier.
+- **"One should not give less than 6 and more than 12 words for predictions"**, excluding
+  stopwords. We feed it article bodies. A 900-word article is ~75× that ceiling.
+- **"It was trained on 2 datasets, combined and preprocessed"** — the datasets are never
+  named. The training data is undisclosed, so contamination against any public benchmark
+  can be neither confirmed nor ruled out.
+- **"Trained on pre-2023 data"**, so it knows nothing of recent events, and the author
+  flags a likely bias around people's names left unpreprocessed.
+
+The proposal (§2.2) says "a BERT text classifier, **fine-tuned on ISOT Fake News Dataset**".
+This checkpoint is not documented as ISOT-trained. If a judge asks what it was trained on,
+the honest answer is that we do not know.
+
+Measured on our corpus, ignoring the card's advice is currently the right call — but only
+just, and only at short inputs:
+
+| input | AUROC (all) | AUROC (hard subset) |
+|---|---|---|
+| title only (the documented 6–12 word range) | 0.892 | 0.625 |
+| body only (~62 words) | 0.942 | 0.766 |
+| **title + body (what we ship)** | **0.947** | **0.766** |
+
+This also reframes the dilution finding below. The model has a usable input window of
+roughly 60–150 words; at 900 it collapses to noise. Chunked scoring is therefore not a
+workaround bolted onto a working model — it is the way to keep this checkpoint inside the
+only input range where it functions at all.
+
+`Pulk17/Fake-News-Detection` is worth evaluating as an alternative: it names its dataset
+and its card describes classifying article *content* rather than titles. Treat its reported
+99.58% accuracy / 99.99% ROC-AUC with suspicion — those are the numbers a leaky benchmark
+produces.
 
 Three backend modes via `DASFAX_SCREENING_MODE`:
 
@@ -214,9 +251,22 @@ Two limits that moving the threshold cannot fix:
 - **Recall never reaches 0.90 at any threshold**, so the recall-first criterion that sets
   the text threshold cannot be satisfied for images at all.
 
-Caveat on the corpus: Commons' AI categories contain a lot of illustration and digital art,
-not only photorealistic imagery. The deployment case that matters — a photorealistic fake
-in a news article — is under-represented, so treat these as a floor rather than an estimate.
+Two caveats on this benchmark, the second of which I introduced myself:
+
+- Commons' AI categories contain a lot of illustration and digital art, not only
+  photorealistic imagery. The deployment case that matters — a photorealistic fake in a
+  news article — is under-represented.
+- **The authentic class is drawn from Wikimedia, and this checkpoint was fine-tuned on
+  Wikimedia↔SDXL pairs.** Its "human" training examples come from the same source as my
+  negatives, so the 20% false-alarm rate is measured on in-distribution photographs and
+  should be read as a *floor*. Real news photography from CNA or the Straits Times is
+  out-of-distribution for it and would likely fare worse. Replacing the negative class
+  with press photographs is the fix.
+
+The card also warns that performance "may be lower for images generated using models other
+than SDXL", and specifically that it underperforms its predecessor on older generators —
+which is consistent with the weak Stable Diffusion row above, since Commons' Stable
+Diffusion category spans SD 1.x through SDXL.
 
 ## Latency
 
