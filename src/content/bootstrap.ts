@@ -1,5 +1,6 @@
 import { classifyHostname } from "../lib/hostname-match";
 import { isProbablyArticle, ARTICLE_CONFIDENCE_THRESHOLD } from "../lib/article-heuristic";
+import { extractArticle } from "../lib/article-extractor";
 import { mountFactCheckUI, type FactCheckController } from "./render/controller";
 import { requestAnalysis, isMockMode } from "./analysis-client";
 
@@ -78,10 +79,26 @@ function runTriage(): void {
       `(threshold=${ARTICLE_CONFIDENCE_THRESHOLD})`
   );
 
-  if (tier1.isArticle) {
-    startFactCheck();
-  } else {
+  if (!tier1.isArticle) {
     teardownFactCheck();
+    return;
+  }
+
+  startFactCheck();
+
+  // WS1 Tier 2: local-only content extraction, logged for now (not sent
+  // anywhere -- WS2's startFactCheck() above is the actual network path,
+  // via WS3's backend once wired).
+  const extracted = extractArticle(document, url, {
+    whitelisted: false,
+    articleConfidence: tier1.confidence,
+  });
+  if (extracted) {
+    console.log("[WS1 Tier2] extracted article:", extracted);
+  } else {
+    console.log(
+      "[WS1 Tier2] isProbablyArticle=true but Readability could not extract content"
+    );
   }
 }
 
