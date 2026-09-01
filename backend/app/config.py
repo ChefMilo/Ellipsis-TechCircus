@@ -23,12 +23,23 @@ def _get_float(name: str, default: float) -> float:
         return default
 
 
+def _get_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     # Which backends to use. "mock" (default) needs no keys.
     llm_provider: str = os.environ.get("DASFAX_LLM_PROVIDER", "mock")        # mock | openai
     search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily
     assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock (WS6; real provider TBD)
+
+    # Demo/presentation only. OFF by default; changes nothing about the normal mock run.
+    # See app/clients/mock_search.py for exactly what it does and why.
+    mock_demo: bool = _get_bool("DASFAX_MOCK_DEMO")
 
     # Credentials (only read by the real providers).
     openai_api_key: str | None = os.environ.get("OPENAI_API_KEY")
