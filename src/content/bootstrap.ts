@@ -3,6 +3,7 @@ import { isProbablyArticle, ARTICLE_CONFIDENCE_THRESHOLD } from "../lib/article-
 import { extractArticle } from "../lib/article-extractor";
 import { mountFactCheckUI, type FactCheckController } from "./render/controller";
 import { requestAnalysis, isMockMode } from "./analysis-client";
+import { showCheckAnywayButton, showTrustedBadge, teardownWs1Ui } from "./trusted-ui";
 
 const LOCATION_CHANGE_EVENT = "ws1:locationchange";
 // SPA route changes can fire before the new view has rendered; give the
@@ -62,6 +63,7 @@ function runTriage(): void {
   // stop before WS2 ever runs.
   if (isMockMode()) {
     console.log(`[WS2] mock mode: rendering on ${url}`);
+    teardownWs1Ui();
     startFactCheck();
     return;
   }
@@ -69,6 +71,7 @@ function runTriage(): void {
   if (tier0 === "whitelisted") {
     console.log(`[WS1 Tier0] whitelisted: ${url} (skipping Tier 1 heuristic)`);
     teardownFactCheck();
+    showTrustedBadge();
     return;
   }
 
@@ -81,9 +84,16 @@ function runTriage(): void {
 
   if (!tier1.isArticle) {
     teardownFactCheck();
+    // No automatic backend call on a page we don't think is an article --
+    // only this explicit, user-initiated override runs startFactCheck().
+    showCheckAnywayButton(() => {
+      console.log(`[WS1] user override: forcing check on ${url}`);
+      startFactCheck();
+    });
     return;
   }
 
+  teardownWs1Ui();
   startFactCheck();
 
   // WS1 Tier 2: local-only content extraction, logged for now (not sent
@@ -123,6 +133,7 @@ function bootstrap(): void {
   );
   window.addEventListener(LOCATION_CHANGE_EVENT, () => {
     teardownFactCheck();
+    teardownWs1Ui();
     setTimeout(runTriage, SPA_RESCORE_DELAY_MS);
   });
 }
