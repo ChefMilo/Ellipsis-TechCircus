@@ -54,8 +54,40 @@ def _warm_screening_models() -> list[str]:
     return status
 
 
+def _configure_app_logging() -> None:
+    """Route `dasfax.*` INFO logs to wherever uvicorn is already writing.
+
+    Uvicorn configures its own loggers and leaves application loggers alone, so without
+    this every log.info() in the pipeline is dropped in silence: the root logger has no
+    handler, and Python's last-resort handler only emits WARNING and above. The tier
+    decision would be invisible in the one place an operator is actually looking.
+
+    Called from lifespan rather than at import, because uvicorn installs its handlers
+    after importing the app.
+    """
+    app_log = logging.getLogger("dasfax")
+    if app_log.handlers:
+        return
+
+    # The handler lives on the "uvicorn" logger, NOT on "uvicorn.error" — the latter is
+    # configured with a level only and propagates upward. Reading the wrong one finds an
+    # empty list, and pairing that with propagate=False silences the logger completely.
+    handlers = logging.getLogger("uvicorn").handlers or logging.getLogger("uvicorn.error").handlers
+
+    app_log.setLevel(logging.INFO)
+    if handlers:
+        app_log.handlers = list(handlers)  # match uvicorn's formatting
+        app_log.propagate = False          # safe: we own a handler now
+    else:
+        # Standalone (pytest, `python -m app`). Let root handle it — do NOT disable
+        # propagation here, or the handler basicConfig just installed is unreachable.
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(message)s")
+        app_log.propagate = True
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _configure_app_logging()
     settings = get_settings()
     if settings.warmup and settings.screening_mode != "heuristic":
         _WARMUP_STATUS.extend(_warm_screening_models())

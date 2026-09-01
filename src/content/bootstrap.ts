@@ -53,27 +53,44 @@ function startFactCheck(): void {
     published_at: extracted?.publishDate ?? undefined,
     source_domain: extracted?.sourceDomain ?? undefined,
   })
-    .then((response) =>
-      response.status === "skipped"
+    .then((response) => {
+      // Log the outcome. Without this the console goes silent on success, which is
+      // indistinguishable from the request never having been sent — and the failure
+      // path uses console.debug, which Chrome hides unless Verbose is enabled.
+      const t2 = response.tier2;
+      console.log(
+        `[WS2] verdict=${response.articleVerdict.level} status=${response.status} ` +
+          `claims=${response.verifiedClaims.length}` +
+          (t2
+            ? ` | tier2 escalated=${t2.escalated} text=${t2.textScore.toFixed(3)} ` +
+              `image=${t2.maxImageScore.toFixed(3)} ${t2.latencyMs.toFixed(0)}ms`
+            : ""),
+        t2?.reasons ?? [],
+      );
+      return response.status === "skipped"
         ? controller.showTrusted(response.articleVerdict.summary)
-        : controller.render(response),
-    )
+        : controller.render(response);
+    })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      // Until WS3 wires the background <-> backend path, every non-mock page hits
-      // this. It's expected, not a fault — keep it out of chrome://extensions
-      // Errors (which only collects console.warn/error), and point at mock mode.
-      const noBackendYet =
+      // The service worker isn't answering at all — it crashed, or the extension
+      // needs reloading after a rebuild. Distinct from "the backend is down",
+      // which the worker reports with its own message.
+      const workerUnreachable =
         message.includes("Could not establish connection") ||
         message.includes("Receiving end does not exist") ||
         message.includes("messaging unavailable");
-      if (noBackendYet) {
-        console.debug(
-          "[WS2] no analysis backend yet (WS3 not wired) — add ?dasfaxMock=1 to test rendering",
+      if (workerUnreachable) {
+        console.warn(
+          "[WS2] extension service worker not responding — reload the extension at " +
+            "chrome://extensions, then reload this page. (Or add ?dasfaxMock=1 to test " +
+            "rendering without a backend.)",
+          error,
         );
-        controller.showError("Fact-check backend not connected");
+        controller.showError("Extension not responding — reload it");
       } else {
-        console.warn("[WS2] analysis failed", error);
+        // Includes "backend not reachable" surfaced by the service worker.
+        console.warn("[WS2] analysis failed:", message);
         controller.showError();
       }
     });
