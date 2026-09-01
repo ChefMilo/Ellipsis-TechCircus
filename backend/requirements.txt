@@ -10,3 +10,4 @@ httpx>=0.27,<1.0            # required by fastapi.testclient
 # Optional real providers (only needed when you switch off mock):
 #   pip install openai       # DASFAX_LLM_PROVIDER=openai
 #   pip install tavily-python # DASFAX_SEARCH_PROVIDER=tavily
+ruff>=0.6,<1.0
