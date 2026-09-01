@@ -121,6 +121,63 @@ identically. Do not over-claim precision about the exact value.
 
 ---
 
+## The text classifier is a register detector, not a claim detector
+
+**This is the most important limitation in WS4, and it goes to the product's premise.**
+
+The classifier scores a whole document. It fires when an entire article *reads* like fake
+news — sensational register, absent attribution, share-bait — not when an article
+*contains* false claims. Measured by embedding a 63-word passage that scores 0.9997 on its
+own into increasingly long stretches of ordinary reporting:
+
+| document | fake share | score | flagged at 0.40? |
+|---|---|---|---|
+| 63 w | 100% | 0.9997 | yes |
+| 100 w | 63% | 0.9947 | yes |
+| 150 w | 42% | 0.6984 | yes |
+| 200 w | 32% | 0.2628 | **no** |
+| 300 w | 21% | 0.0438 | no |
+| 900 w | 7% | 0.0095 | no |
+
+**Roughly 35–40% of the document must be fake before it fires.** Position is irrelevant —
+a fake passage as the very first paragraph of a 900-word article scores 0.0095, versus
+0.0063 for the same article with no fake content at all. This is dilution, not truncation.
+
+Why that matters more than the accuracy figures: the proposal's own case for claim-level
+assessment is that "real articles often mix sound and unsound claims" (§2.3, §3.2). Tier 3
+exists precisely to handle mixed articles — and Tier 2, which gates it, is structurally
+incapable of detecting them. **The articles Tier 3 was built for are the ones that will
+never reach it.** Tier 2 catches wholesale fabrications; a mostly-true article carrying
+three false claims passes straight through.
+
+Note this is invisible in the confusion matrix above, because every corpus sample is ~62
+words — one chunk, no dilution. The evaluation never exercised production input length.
+
+### The candidate fix, and why it is not shipped yet
+
+Score overlapping windows and take the maximum, instead of scoring the document once.
+Measured on a 900-word article with a 7% fake passage against a clean 900-word control:
+
+| window/stride | spiked | clean | separation | latency |
+|---|---|---|---|---|
+| 60/40 | 0.9996 | 0.2561 | 3.9× | 1169 ms |
+| 90/60 | 0.9980 | 0.2686 | 3.7× | 589 ms |
+| **120/80** | **0.6321** | **0.0842** | **7.5×** | **572 ms** |
+| 180/120 | 0.2163 | 0.0649 | 3.3× | 708 ms |
+| whole doc | 0.0095 | 0.0063 | 1.5× | ~25 ms |
+
+A 120-word window recovers the diluted signal from 0.0095 to 0.632 — above threshold —
+while clean prose stays at 0.084.
+
+It is **not** enabled, for two reasons. First, max-pooling over N windows takes the
+maximum of N draws, so longer articles get more chances to cross the threshold; that
+plausibly raises the false-positive rate on genuine long-form journalism, and the current
+corpus cannot measure it because every sample is one chunk. Second, 572 ms of text
+inference does not fit the 250 ms text budget and would need the budget re-derived.
+
+Shipping it now would trade a measured limitation for an unmeasured one. It needs a corpus
+of real, full-length articles first — which is the same thing the text benchmark needs.
+
 ## The image detector is the weak half — measured, not assumed
 
 `python ws4_eval.py --images` scores the real CNN against
