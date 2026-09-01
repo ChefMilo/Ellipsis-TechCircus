@@ -231,6 +231,97 @@ against real misinformation is unknown. We have a gate that demonstrably does no
 and whose sensitivity is unmeasured, which is a better starting point than the reverse, but
 it is not a finished component.
 
+## Fine-tuning: WELFake alone halves the problem, and that is not enough
+
+`train_ws4.py` fine-tunes `bert-base-uncased` on WELFake (72k articles merging four
+source datasets), freezing all but the top two encoder layers.
+
+**Held-out WELFake test: 94.2% accuracy, 95.6% precision, 90.8% recall.** That number is
+worthless on its own, and quoting it would repeat the mistake every checkpoint above makes.
+The benchmark that matters:
+
+| model | real news flagged as fake |
+|---|---|
+| `omykhailiv` | 83.1% |
+| `Pulk17` | 61.7% |
+| `hamzab` | 55.2% |
+| **ours, WELFake-only** | **46.7%** |
+| heuristic fallback | 0.0% |
+
+Best of every trained model, and still unusable. The register pattern survives training:
+
+| category | flagged |
+|---|---|
+| World | 24.2% |
+| Sports | 48.3% |
+| Business | 50.0% |
+| Sci/Tech | 64.2% |
+
+No threshold rescues it. Sweeping to the extreme:
+
+| threshold | FPR on real news | recall on synthetic fakes |
+|---|---|---|
+| 0.40 | 50.8% | 76.7% |
+| 0.90 | 34.2% | 73.3% |
+| 0.99 | 17.5% | 73.3% |
+
+Recall is flat from 0.5 upward — the scores are bimodal again — so raising the threshold
+buys precision without costing recall right up until it stops helping. Even at 0.99, one
+real article in six is flagged.
+
+**Why WELFake alone was never going to fix it:** it merges ISOT, McIntire, BuzzFeed
+Political and a Kaggle set — all political hard news. Its "real" class has the same
+register skew as the checkpoints trained on it. Training on register-skewed data teaches
+register, more accurately.
+
+Two things did improve and are worth keeping: the model now **ships a real `id2label`**
+(`{0: real, 1: fake}`), so the empirical label-direction check is no longer needed
+downstream; and the dateline scrubbing means it is not leaning on `(Reuters)`.
+
+### Adding real news across content types: a perfect score that means nothing
+
+The second run adds 8,000 AG News real articles (World/Sports/Business/Sci-Tech) to the
+training mix. Result on the benchmark:
+
+| | real news flagged |
+|---|---|
+| WELFake only | 46.7% |
+| **WELFake + AG News** | **0.0%** |
+
+A perfect score — and it is an illusion. Those articles came from AG News *train* and the
+benchmark is AG News *test*: different splits, same distribution. The caveat was written
+down before the run, and it turned out to be the whole story.
+
+**The honest test is the chilli article** — a real, benign local story, never in any
+training set:
+
+| model | chilli article (REAL) | AG News test FPR | our-corpus real FPR |
+|---|---|---|---|
+| WELFake only | **0.9897 — flagged** | 46.7% | 3.3% |
+| WELFake + AG News | **0.9960 — flagged** | 0.0% | 0.0% |
+
+Both fine-tunes still flag it, and the augmented one flags it *harder* while scoring zero
+on two other benchmarks. A model can look perfect on every held-out set you have and still
+fail the one page a user actually opened.
+
+**It is not a length artifact.** Concatenating real AG News articles up to 614 words keeps
+them at 0.0% flagged, so the model is not simply calling long text fake. What augmentation
+bought was *coverage of one more register* — wire-service news across topics — not
+generalisation. Community and promotional writing sits outside both training registers and
+is still flagged at 0.996.
+
+**The lesson:** register bias cannot be patched by adding a register. Every real-news source
+you add teaches the model that *that* source is real, and the long tail of web writing —
+local papers, community reporting, blogs, trade press — remains outside. Fixing this needs
+either genuinely diverse real-web-text data, or a different formulation than
+whole-document fake-news classification.
+
+**Where that leaves the tier:** the heuristic is still the only gate with a defensible
+false-positive rate (0.0% on AG News, and it scored the chilli article 0.127 — correctly).
+It is not good; it is honest, inspectable, and it does not cry wolf. The real
+misinformation-detection work belongs at Tier 3, where claims are checked against
+retrieved evidence rather than prose style.
+
 ## What the classifier actually discriminates
 
 The first real page ever tested through the live extension was a local South African
