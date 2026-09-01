@@ -27,7 +27,28 @@ function startFactCheck(): void {
   });
   factCheck = controller;
   controller.showLoading();
-  requestAnalysis({ url: location.href, title: document.title })
+
+  const url = location.href;
+  // WS1 Tier 2: local-only extraction, run fresh right before the request
+  // so the backend gets the actual cleaned article -- not just url/title.
+  const extracted = extractArticle(document, url, {
+    whitelisted: false,
+    articleConfidence: isProbablyArticle(document).confidence,
+  });
+  if (extracted) {
+    console.log("[WS1 Tier2] extracted article:", extracted);
+  } else {
+    console.log(
+      "[WS1 Tier2] Readability could not extract content -- sending url/title only"
+    );
+  }
+
+  requestAnalysis({
+    url,
+    title: document.title,
+    text: extracted?.bodyText,
+    images: extracted?.imageUrls,
+  })
     .then((response) =>
       response.status === "skipped"
         ? controller.showTrusted(response.articleVerdict.summary)
@@ -95,21 +116,6 @@ function runTriage(): void {
 
   teardownWs1Ui();
   startFactCheck();
-
-  // WS1 Tier 2: local-only content extraction, logged for now (not sent
-  // anywhere -- WS2's startFactCheck() above is the actual network path,
-  // via WS3's backend once wired).
-  const extracted = extractArticle(document, url, {
-    whitelisted: false,
-    articleConfidence: tier1.confidence,
-  });
-  if (extracted) {
-    console.log("[WS1 Tier2] extracted article:", extracted);
-  } else {
-    console.log(
-      "[WS1 Tier2] isProbablyArticle=true but Readability could not extract content"
-    );
-  }
 }
 
 function patchHistoryMethod(methodName: "pushState" | "replaceState"): void {
