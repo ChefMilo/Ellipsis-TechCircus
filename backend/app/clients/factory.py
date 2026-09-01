@@ -21,7 +21,7 @@ def make_llm_client(settings: Settings | None = None) -> LLMClient:
 def make_search_client(settings: Settings | None = None) -> SearchClient:
     settings = settings or get_settings()
     if settings.search_provider == "mock":
-        return MockSearchClient()
+        return MockSearchClient(demo_spread=settings.mock_demo)
     if settings.search_provider == "tavily":
         from app.clients.tavily_search import TavilySearchClient
         return TavilySearchClient(settings)
