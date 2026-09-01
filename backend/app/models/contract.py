@@ -106,6 +106,17 @@ class Claim(BaseModel):
     search_query: str | None = Field(None, description="Query WS5 issued to retrieve evidence (for transparency/debug).")
     evidence: list[Evidence] = Field(default_factory=list, description="Retrieved snippets. Empty for non-factual or unretrieved claims.")
 
+    # --- Anchoring hints (WS5 -> WS2) -------------------------------------- #
+    # Offsets index ArticleInput.text — the same cleaned body text WS1 produces as
+    # `bodyText` — so WS2 can map the span onto the live DOM:
+    # `ArticleInput.text[char_start:char_end]` is the source span this claim came from.
+    # All four are None when WS5 could not place the claim confidently; WS2 then falls
+    # back to fuzzy matching on `text`.
+    char_start: int | None = Field(None, ge=0, description="Start offset of the claim's source span within ArticleInput.text.")
+    char_end: int | None = Field(None, ge=0, description="End offset (exclusive) of the source span within ArticleInput.text.")
+    prefix: str | None = Field(None, description="Up to 32 chars of ArticleInput.text immediately BEFORE the span (disambiguates repeats).")
+    suffix: str | None = Field(None, description="Up to 32 chars of ArticleInput.text immediately AFTER the span.")
+
 
 # --------------------------------------------------------------------------- #
 # WS5 result envelope (WS5 -> WS6)
@@ -119,6 +130,7 @@ class ExtractionStats(BaseModel):
     dropped_duplicate: int = 0
     kept_after_ranking: int = 0
     claims_with_evidence: int = 0
+    claims_anchored: int = 0
 
 
 class ClaimExtractionResult(BaseModel):

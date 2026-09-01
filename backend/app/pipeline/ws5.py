@@ -7,7 +7,8 @@ Flow:
   1. LLM extracts candidate claims from cleaned text (mock heuristic by default).
   2. Near-duplicate claims are removed.
   3. Factual claims above the checkworthiness floor are ranked; top-N kept (proposal: 3–5).
-  4. Each kept claim gets a search query + retrieved evidence snippets.
+  4. Each kept claim gets a search query + retrieved evidence snippets, and is
+     anchored back to its span in the source text for WS2's DOM re-anchoring.
   5. Result is assembled with stats + provenance for observability.
 
 Non-factual claims (opinion/prediction) are NOT retrieved on, but the counts are
@@ -25,6 +26,7 @@ from app.models.contract import (
     ClaimType,
     ExtractionStats,
 )
+from app.services.anchoring import locate_claim
 from app.services.ranking import dedup, rank_factual
 from app.services.retrieval import retrieve_evidence
 
@@ -62,7 +64,8 @@ def run_ws5(
     )
     stats.kept_after_ranking = len(top_factual)
 
-    # 4. Retrieve evidence per kept claim, and build contract Claims.
+    # 4. Retrieve evidence + resolve source anchors per kept claim, then build
+    #    contract Claims.
     claims: list[Claim] = []
     for rank, ec in enumerate(top_factual, start=1):
         query, evidence = retrieve_evidence(
@@ -73,6 +76,18 @@ def run_ws5(
         )
         if evidence:
             stats.claims_with_evidence += 1
+
+        # Resolve the claim back onto the source text so WS2 can re-anchor it in the
+        # DOM without re-deriving offsets the real (rewriting) extractor has lost.
+        anchor = locate_claim(
+            ec.text, article.text, min_similarity=settings.anchor_min_similarity
+        )
+        if anchor is None:
+            char_start, char_end, prefix, suffix = None, None, None, None
+        else:
+            char_start, char_end, prefix, suffix = anchor
+            stats.claims_anchored += 1
+
         claims.append(
             Claim(
                 id=f"c{rank}",
@@ -82,6 +97,10 @@ def run_ws5(
                 rank=rank,
                 search_query=query,
                 evidence=evidence,
+                char_start=char_start,
+                char_end=char_end,
+                prefix=prefix,
+                suffix=suffix,
             )
         )
 
@@ -97,5 +116,6 @@ def run_ws5(
             "max_claims": settings.max_claims,
             "min_checkworthiness": settings.min_checkworthiness,
             "evidence_per_claim": settings.evidence_per_claim,
+            "anchor_min_similarity": settings.anchor_min_similarity,
         },
     )
