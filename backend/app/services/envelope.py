@@ -13,6 +13,8 @@ It also computes the article-level rollup from the real verdicts. Two rules matt
      up", and `article_verdict_for()` is the only thing that may produce it. Any path
      that stops before Tier 3 — Tier 2 screened and cleared, no article text, no
      checkable claims — reports UNRATED, with the reason in `ArticleVerdict.summary`.
+     So does a Tier 3 run in which nothing could be verified either way: UNRATED says
+     "not checked", CAUTION says "something looks off", and only the second is a warning.
 """
 from __future__ import annotations
 
@@ -81,9 +83,11 @@ def article_verdict_for(assessments: Iterable[Assessment]) -> ArticleVerdict:
     """Roll per-claim verdicts up into the article-level verdict WS2's pill shows.
 
     Worst-wins, with one hard floor: OK requires at least one genuinely SUPPORTED claim.
-    A page whose claims are all unverified or all opinion is CAUTION, never OK — saying
+    A page whose claims are all unverified or all opinion is UNRATED, never OK — saying
     "looks fine" about something nobody could check is the one failure mode that would
-    actively mislead a reader.
+    actively mislead a reader. UNRATED rather than CAUTION because "we could not check
+    this" is not the same statement as "something here looks wrong", and CAUTION on a page
+    with nothing against it is a false alarm.
     """
     counts = Counter(a.status for a in assessments)
     if not counts.total():
@@ -98,8 +102,9 @@ def article_verdict_for(assessments: Iterable[Assessment]) -> ArticleVerdict:
     elif counts[AssessmentStatus.SUPPORTED]:
         level = ArticleVerdictLevel.OK
     else:
-        # Only NEEDS_REVIEW and/or OPINION remain.
-        level = ArticleVerdictLevel.CAUTION
+        # Only NEEDS_REVIEW and/or OPINION remain: nothing was supported, but nothing was
+        # disputed either. Neutral, with the reason spelled out in the summary.
+        level = ArticleVerdictLevel.UNRATED
         summary = f"{UNVERIFIED_SUMMARY} ({summary})"
 
     return ArticleVerdict(level=level, summary=summary)
