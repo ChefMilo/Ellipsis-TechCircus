@@ -37,6 +37,7 @@ class HFTextScorer:
         self.fake_index = index
         self.label_provenance = provenance
         self.name = f"hf:{settings.bert_model_name}"
+        self.threshold = settings.text_threshold
 
     def warmup(self) -> None:
         """One real forward pass. Loading weights is not enough — torch allocates and

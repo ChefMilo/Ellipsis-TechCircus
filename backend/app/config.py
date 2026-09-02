@@ -102,31 +102,34 @@ class Settings:
     #
     # SHIPPED CONFIGURATION: text=heuristic, image=auto. That is the best available
     # combination of the two, and each half is set from its own evidence.
-    text_mode: str = ""      # heuristic | auto | huggingface  (default: screening_mode)
+    text_mode: str = "auto"   # heuristic | auto | huggingface  ("" = use screening_mode)
     image_mode: str = "auto"  # heuristic | auto | huggingface
 
-    # Operating thresholds. Measured, not guessed:
+    # Operating thresholds. Each backend carries its OWN calibrated threshold, because
+    # their score distributions are nothing alike — applying the model's threshold to the
+    # heuristic would leave the fallback almost inert, and vice versa. The scorer decides
+    # which one applies (see app/clients/*_screening.py and hf_text.py).
     #
-    #   python ws4_eval.py --backend huggingface
+    # Fine-tuned model (models/dasfax-tier2-text), swept on 480 real AG News articles:
     #
-    # Tier 2 routes rather than judges, so it is tuned RECALL-FIRST: a miss here means the
-    # article is never checked and the reader sees nothing, while a false alarm only costs
-    # Tier 3 compute and never renders a wrong badge. "Don't cry wolf" (§3.3) binds at
-    # Tier 3 / WS6, where a status is actually shown.
+    #   thresh   real-news FPR   all-fake recall   hard-fake recall   chilli article
+    #    0.400        50.8%           76.7%             12.5%          FLAGGED
+    #    0.900        34.2%           73.3%              0.0%          FLAGGED
+    #    0.990        17.5%           73.3%              0.0%          ok
+    #    0.995        10.6%           73.3%              0.0%          ok   <- shipped
+    #    0.999         0.0%            0.0%              0.0%          ok   (inert)
     #
-    # 0.40 rather than a higher value because the corpus is split into easy cases (obvious
-    # clickbait) and hard ones (real journalism that reads as sensational; misinformation
-    # written in a calm register). Selecting on the aggregate picks 0.85; selecting on the
-    # hard subset — which is what real browsing looks like — picks 0.40:
+    # 0.995 is the best this model offers: below it the false-positive rate climbs with no
+    # recall gain, above it the model stops firing entirely.
     #
-    #   threshold   hard-subset recall   overall FPR
-    #   0.40        0.875                0.233
-    #   0.65        0.625                0.200
-    #   0.85        0.625                0.133
-    #
-    # Two more of eight hard fakes caught, for 3.3pp more false escalation. The aggregate
-    # hides this because every easy case is caught at any threshold.
-    text_threshold: float = 0.40
+    # BE CLEAR-EYED ABOUT WHAT THIS COSTS. The heuristic reaches the same 73.3% recall at
+    # 0.0% false positives. Running the model as the gate trades 10.6pp of false escalation
+    # for no measured recall gain; both score 0% on the hard subset. It is active because
+    # the proposal specifies a BERT classifier and the team chose fidelity to that;
+    # DASFAX_TEXT_MODE=heuristic reverses it in one variable.
+    text_threshold: float = 0.995
+    # The heuristic's own operating point, unchanged and separately calibrated.
+    heuristic_text_threshold: float = 0.40
     # Image threshold, measured against the real CNN on 66 Wikimedia images:
     #
     #   python ws4_eval.py --images
@@ -146,7 +149,10 @@ class Settings:
     image_threshold: float = 0.70
 
     # Real model checkpoints (read unless screening_mode="heuristic").
-    bert_model_name: str = "omykhailiv/bert-fake-news-recognition"
+    # Our fine-tune (train_ws4.py). Weights are NOT in the repo — 438MB, past GitHub's
+    # limit — so a fresh clone degrades to the heuristic with a message naming the command
+    # that produces them. Reproducible in ~27 min from a fixed seed.
+    bert_model_name: str = "models/dasfax-tier2-text"
     image_model_name: str = "Organika/sdxl-detector"
     # Pin a commit SHA so a confusion matrix stays reproducible when the checkpoint moves.
     bert_revision: str | None = None
@@ -221,11 +227,12 @@ def get_settings() -> Settings:
         dedup_threshold=_get_float("DASFAX_DEDUP_THRESHOLD", 0.85),
         anchor_min_similarity=_get_float("DASFAX_ANCHOR_MIN_SIMILARITY", 0.5),
         screening_mode=_get_str("DASFAX_SCREENING_MODE", "heuristic"),
-        text_mode=_get_str("DASFAX_TEXT_MODE", ""),
+        text_mode=_get_str("DASFAX_TEXT_MODE", "auto"),
         image_mode=_get_str("DASFAX_IMAGE_MODE", "auto"),
-        text_threshold=_get_float("DASFAX_TEXT_THRESHOLD", 0.40),
+        text_threshold=_get_float("DASFAX_TEXT_THRESHOLD", 0.995),
+        heuristic_text_threshold=_get_float("DASFAX_HEURISTIC_TEXT_THRESHOLD", 0.40),
         image_threshold=_get_float("DASFAX_IMAGE_THRESHOLD", 0.70),
-        bert_model_name=_get_str("DASFAX_BERT_MODEL_NAME", "omykhailiv/bert-fake-news-recognition"),
+        bert_model_name=_get_str("DASFAX_BERT_MODEL_NAME", "models/dasfax-tier2-text"),
         image_model_name=_get_str("DASFAX_IMAGE_MODEL_NAME", "Organika/sdxl-detector"),
         bert_revision=_get_opt_str("DASFAX_BERT_REVISION"),
         image_revision=_get_opt_str("DASFAX_IMAGE_REVISION"),

@@ -155,7 +155,10 @@ def run_ws4(
     # No body text, or a text model that overran, means score 0.0 = "no evidence", NOT
     # "looks safe". The escalation decision below handles the two cases differently.
     text_score = text_risk.score if text_risk else 0.0
-    text_flagged = text_risk is not None and text_score >= settings.text_threshold
+    # The scorer owns its threshold: a degrade to the heuristic must also fall back to the
+    # heuristic's operating point, or the fallback runs at the model's 0.995 and never fires.
+    text_threshold = getattr(text_scorer, "threshold", settings.text_threshold)
+    text_flagged = text_risk is not None and text_score >= text_threshold
 
     image_results = [
         ImageScreeningResult(
@@ -173,7 +176,7 @@ def run_ws4(
 
     reasons: list[str] = []
     if text_flagged:
-        reasons.append(f"text risk {text_score:.2f} >= threshold {settings.text_threshold:.2f}")
+        reasons.append(f"text risk {text_score:.3f} >= threshold {text_threshold:.3f}")
     if image_flagged:
         flagged_count = sum(1 for r in image_results if r.flagged)
         reasons.append(
@@ -230,7 +233,7 @@ def run_ws4(
             "screening_mode": settings.screening_mode,
             "text_backend": text_risk.backend if text_risk else "not-run",
             "image_backend": image_scorer.name,
-            "text_threshold": settings.text_threshold,
+            "text_threshold": text_threshold,
             "image_threshold": settings.image_threshold,
             "images_screened": len(image_results),
             "images_scored": images_scored,

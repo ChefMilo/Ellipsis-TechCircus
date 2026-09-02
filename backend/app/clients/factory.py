@@ -63,16 +63,28 @@ def make_text_scorer(settings: Settings | None = None, *, strict: bool = False) 
     if mode == "heuristic":
         if strict:
             raise RuntimeError("strict=True but this component is in heuristic mode; refusing to report on the fallback")
-        return HeuristicTextScorer()
+        return HeuristicTextScorer(threshold=settings.heuristic_text_threshold)
 
     try:
         from app.clients.hf_text import HFTextScorer
         return HFTextScorer(settings)
     except Exception as exc:
-        reason = f"real text model unavailable ({exc.__class__.__name__}: {exc})"
+        # The shipped checkpoint is a local path produced by train_ws4.py, and its weights
+        # are deliberately not in the repo (438MB, past GitHub's limit). A fresh clone
+        # lands here, so say what to run rather than surfacing a raw HuggingFace error
+        # about a "model identifier" that was never meant to be one.
+        looks_local = "/" in settings.bert_model_name and not settings.bert_model_name.count("/") == 1
+        if looks_local or settings.bert_model_name.startswith("models/"):
+            reason = (
+                f"text model not built yet at {settings.bert_model_name!r} — "
+                f"run `python train_ws4.py` (~27 min, fixed seed) to produce it. "
+                f"Using the heuristic until then."
+            )
+        else:
+            reason = f"real text model unavailable ({exc.__class__.__name__}: {exc})"
         if strict or mode == "huggingface":
             raise RuntimeError(reason) from exc
-        return HeuristicTextScorer(degraded_reason=reason)
+        return HeuristicTextScorer(degraded_reason=reason, threshold=settings.heuristic_text_threshold)
 
 
 def make_image_scorer(settings: Settings | None = None, *, strict: bool = False) -> ImageScorer:

@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.config import get_settings
+from app.config import effective_image_mode, effective_text_mode, get_settings
 from app.models.analysis import AnalysisResponse
 from app.models.contract import ArticleInput, ClaimExtractionResult
 from app.models.screening import ScreeningInput, ScreeningResult
@@ -89,12 +89,18 @@ def _configure_app_logging() -> None:
 async def lifespan(app: FastAPI):
     _configure_app_logging()
     settings = get_settings()
-    if settings.warmup and settings.screening_mode != "heuristic":
+    # Warm if EITHER half runs a real model. Keying this on the global screening_mode was
+    # a bug once per-component modes existed: text_mode=auto loaded a real checkpoint that
+    # was never warmed, so the first request paid the cold-start cost, blew the 250ms text
+    # budget, and fail-open escalated a perfectly ordinary article.
+    modes = (effective_text_mode(settings), effective_image_mode(settings))
+    needs_warm = any(mode != "heuristic" for mode in modes)
+    if settings.warmup and needs_warm:
         _WARMUP_STATUS.extend(_warm_screening_models())
         for line in _WARMUP_STATUS:
             log.info("WS4 warmup — %s", line)
     else:
-        _WARMUP_STATUS.append(f"skipped (mode={settings.screening_mode}, warmup={settings.warmup})")
+        _WARMUP_STATUS.append(f"skipped (text={effective_text_mode(settings)}, image={effective_image_mode(settings)}, warmup={settings.warmup})")
     yield
 
 
@@ -115,6 +121,9 @@ def health() -> dict:
         "llm_provider": s.llm_provider,
         "search_provider": s.search_provider,
         "screening_mode": s.screening_mode,
+        "text_mode": effective_text_mode(s),
+        "image_mode": effective_image_mode(s),
+        "bert_model": s.bert_model_name,
         "text_threshold": s.text_threshold,
         "image_threshold": s.image_threshold,
         # Which backends are actually live. A degraded tier must be visible here, not

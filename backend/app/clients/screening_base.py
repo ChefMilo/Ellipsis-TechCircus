@@ -65,9 +65,16 @@ class FetchedImage:
 
 @runtime_checkable
 class TextScorer(Protocol):
-    """Scores article text for fake-news risk in [0,1]."""
+    """Scores article text for fake-news risk in [0,1].
+
+    `threshold` belongs to the scorer, not the pipeline: the heuristic and the fine-tuned
+    model have completely different score distributions (the heuristic operates at 0.40,
+    the model at 0.995), so one shared number would leave whichever backend is running
+    either inert or hair-trigger.
+    """
 
     name: str
+    threshold: float
 
     def warmup(self) -> None:
         """Load weights and run one forward pass. No-op for offline backends."""

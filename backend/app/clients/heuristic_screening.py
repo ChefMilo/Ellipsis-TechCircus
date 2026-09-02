@@ -22,8 +22,9 @@ from app.services.text_classifier import heuristic_score
 class HeuristicTextScorer:
     name = TEXT_BACKEND
 
-    def __init__(self, degraded_reason: str | None = None) -> None:
+    def __init__(self, degraded_reason: str | None = None, threshold: float = 0.40) -> None:
         self.degraded_reason = degraded_reason
+        self.threshold = threshold
 
     def warmup(self) -> None:
         """Nothing to load."""

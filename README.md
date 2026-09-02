@@ -22,9 +22,15 @@ Two terminals.
 cd backend
 python -m venv .venv && source .venv/bin/activate    # Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt                       # offline, no API keys, ~10s
-pip install -r requirements-ml.txt                    # optional: the real Tier 2 models
+pip install -r requirements-ml.txt                    # the real Tier 2 models
+python train_ws4.py                                   # builds the text model, ~27 min
 uvicorn app.main:app --port 8000
 ```
+
+**About `train_ws4.py`:** the Tier 2 text model is fine-tuned by us, and its 438MB of
+weights are not in the repo (past GitHub's 100MB limit). Training is deterministic from a
+fixed seed, so anyone gets the same model. Until you run it the backend still works — it
+degrades to the heuristic and says so in `/health` and in every response.
 
 `GET /health` shows which backends are live. Without `requirements-ml.txt` everything still
 runs — Tier 2 falls back to offline heuristics and says so in every response.
