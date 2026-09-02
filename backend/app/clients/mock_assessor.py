@@ -35,6 +35,26 @@ def _stance_of(snippet: str) -> str | None:
     return None
 
 
+def _explain(supporting: int, contradicting: int) -> str:
+    """A sentence describing what was counted.
+
+    The real assessor supplies its own model-written explanation, so the mock supplies one
+    too and both providers behave identically through the service. This one only reports
+    the tally — it is not an argument about the claim, because the fixture has none.
+    """
+    parts: list[str] = []
+    if supporting:
+        verb = "source supports" if supporting == 1 else "sources support"
+        parts.append(f"{supporting} retrieved {verb} this claim")
+    if contradicting:
+        if parts:
+            parts.append(f"{contradicting} disputes it" if contradicting == 1 else f"{contradicting} dispute it")
+        else:
+            verb = "source disputes" if contradicting == 1 else "sources dispute"
+            parts.append(f"{contradicting} retrieved {verb} this claim")
+    return " and ".join(parts) + "."
+
+
 class MockAssessorClient(AssessorClient):
     name = "mock-assessor-stance-fixture-v1"
 
@@ -74,5 +94,5 @@ class MockAssessorClient(AssessorClient):
             status=status,
             evidence_indices=cited,
             confidence=round(confidence, 2),
-            explanation=None,  # the service writes the plain-language wording
+            explanation=_explain(len(supporting), len(contradicting)),
         )

@@ -1,4 +1,9 @@
-"""Selects concrete LLM/search/assessor clients from Settings. Defaults to mock (no keys needed)."""
+"""Selects concrete LLM/search/assessor clients from Settings. Defaults to mock (no keys needed).
+
+Every real provider is behind a LAZY import, so the default offline path never needs the
+`openai` or `tavily-python` packages installed. "openai" means the OpenAI wire format:
+DASFAX_OPENAI_BASE_URL points it at Gemini/Groq/etc. See app/clients/openai_compat.py.
+"""
 from __future__ import annotations
 
 from app.clients.base import AssessorClient, LLMClient, SearchClient
@@ -29,11 +34,14 @@ def make_search_client(settings: Settings | None = None) -> SearchClient:
 
 
 def make_assessor_client(settings: Settings | None = None) -> AssessorClient:
-    """WS6's assessor. Only the mock exists today; a real provider drops in here behind
-    the same Protocol without touching the assessment service."""
+    """WS6's assessor. Real providers drop in behind the same Protocol without touching
+    the assessment service, which keeps citation-binding and the §2.5 downgrade."""
     settings = settings or get_settings()
     if settings.assessor_provider == "mock":
         return MockAssessorClient()
+    if settings.assessor_provider == "openai":
+        from app.clients.openai_assessor import OpenAIAssessorClient
+        return OpenAIAssessorClient(settings)
     raise ValueError(
-        f"Unknown DASFAX_ASSESSOR_PROVIDER={settings.assessor_provider!r} (expected 'mock')"
+        f"Unknown DASFAX_ASSESSOR_PROVIDER={settings.assessor_provider!r} (expected 'mock' or 'openai')"
     )
