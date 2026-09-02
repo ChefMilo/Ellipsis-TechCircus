@@ -1,8 +1,16 @@
 /**
- * Wires the pieces together: Shadow root + pill + drawer + highlight layer, plus
- * the cross-cutting concerns — document-level click/keyboard hit-testing for
- * highlights, a MutationObserver that re-anchors claims lost to lazy-loading or
- * re-renders, and per-URL dismissal memory.
+ * Wires the pieces together: Shadow root + pill + drawer + hovercard + highlight
+ * layer, plus the cross-cutting concerns — document-level pointer/keyboard
+ * hit-testing for highlights, a MutationObserver that re-anchors claims lost to
+ * lazy-loading or re-renders, and per-URL dismissal memory.
+ *
+ * Interaction model (desktop-first):
+ *   - hovering a highlighted claim opens the hovercard next to it (the primary
+ *     way to read a claim's evidence);
+ *   - clicking a highlighted claim PINS that hovercard open (a dismiss button
+ *     appears); clicking it again, pressing Esc, or clicking away unpins it;
+ *   - the full-height drawer is reached only from the summary pill, for the
+ *     all-claims overview.
  *
  * `bootstrap.ts` (WS1) calls `mountFactCheckUI()` once the page is judged an
  * article, then drives it with `showLoading()` / `render()` / `showError()`.
@@ -11,6 +19,7 @@ import type { AnalysisResponse } from "../../shared/contract";
 import { statusKeyFor, type StatusKey } from "./status-config";
 import { rangesForClaims } from "../anchor/to-range";
 import { Highlights } from "./highlights";
+import { Hovercard } from "./hovercard";
 import { Panel } from "./panel";
 import { Pill } from "./pill";
 import { createShadowRoot, layerOf, type ShadowUI } from "./shadow-root";
@@ -33,6 +42,8 @@ export interface MountOptions {
 }
 
 const DISMISS_PREFIX = "dasfax:dismissed:";
+/** Pointer-move hit-testing is cheap but not free; sample at most this often. */
+const MOUSEMOVE_THROTTLE_MS = 50;
 
 function readDismissed(url: string): Promise<boolean> {
   try {
@@ -63,6 +74,7 @@ class Controller implements FactCheckController {
   private readonly shadow: ShadowUI;
   private readonly pill: Pill;
   private readonly panel: Panel;
+  private readonly hovercard: Hovercard;
   private readonly highlights: Highlights;
   private readonly articleRoot: Element;
   private readonly reanchorWindowMs: number;
@@ -73,8 +85,19 @@ class Controller implements FactCheckController {
   private observer: MutationObserver | null = null;
   private reanchorDeadline = 0;
   private reanchorTimer: number | null = null;
+
+  /** Last claim the pointer resolved to, so mousemove only acts on a change. */
+  private lastPointerClaimId: string | null = null;
+  private lastMouseMoveAt = 0;
+
   private readonly onDocClick: (e: MouseEvent) => void;
   private readonly onDocKeydown: (e: KeyboardEvent) => void;
+  private readonly onDocMouseMove: (e: MouseEvent) => void;
+  private readonly onDocPointerOver: (e: MouseEvent) => void;
+  private readonly onDocPointerOut: (e: MouseEvent) => void;
+  private readonly onDocFocusIn: (e: FocusEvent) => void;
+  private readonly onDocFocusOut: (e: FocusEvent) => void;
+  private readonly onWinScroll: () => void;
 
   constructor(opts: MountOptions) {
     this.articleRoot = opts.articleRoot ?? document.body;
@@ -89,19 +112,41 @@ class Controller implements FactCheckController {
       onClose: () => this.highlights.setActive(null),
     });
 
+    this.hovercard = new Hovercard(layer, {
+      // Pinning a card is the "active" (click-selected) claim.
+      onPinChange: (id) => this.highlights.setActive(id),
+    });
+
     this.pill = new Pill(layer, {
-      onOpen: () => this.panel.open(),
+      onOpen: () => {
+        this.hovercard.hide();
+        this.panel.open();
+      },
       onRetry: () => opts.onRetry?.(),
       onDismiss: () => {
         if (this.response) writeDismissed(this.response.url, true);
+        this.hovercard.hide();
         this.panel.close();
       },
     });
 
     this.onDocClick = (e) => this.handleDocClick(e);
     this.onDocKeydown = (e) => this.handleDocKeydown(e);
+    this.onDocMouseMove = (e) => this.handleDocMouseMove(e);
+    this.onDocPointerOver = (e) => this.handleDocPointerOver(e);
+    this.onDocPointerOut = (e) => this.handleDocPointerOut(e);
+    this.onDocFocusIn = (e) => this.handleDocFocusIn(e);
+    this.onDocFocusOut = (e) => this.handleDocFocusOut(e);
+    this.onWinScroll = () => this.handleScroll();
+
     document.addEventListener("click", this.onDocClick, true);
     document.addEventListener("keydown", this.onDocKeydown, true);
+    document.addEventListener("mousemove", this.onDocMouseMove, true);
+    document.addEventListener("mouseover", this.onDocPointerOver, true);
+    document.addEventListener("mouseout", this.onDocPointerOut, true);
+    document.addEventListener("focusin", this.onDocFocusIn, true);
+    document.addEventListener("focusout", this.onDocFocusOut, true);
+    window.addEventListener("scroll", this.onWinScroll, true);
   }
 
   showLoading(): void {
@@ -109,17 +154,21 @@ class Controller implements FactCheckController {
   }
 
   showTrusted(summary?: string): void {
+    this.hovercard.hide();
     this.highlights.clear();
     this.pill.showTrusted(summary);
   }
 
   showError(message?: string): void {
+    this.hovercard.hide();
     this.highlights.clear();
     this.pill.showError(message);
   }
 
   render(response: AnalysisResponse): void {
     this.response = response;
+    this.lastPointerClaimId = null;
+    this.hovercard.hide();
 
     if (response.status === "skipped") {
       this.showTrusted(response.articleVerdict.summary);
@@ -136,6 +185,7 @@ class Controller implements FactCheckController {
     this.anchorAndPaint();
 
     this.panel.setData(response, this.unanchored);
+    this.hovercard.setData(response, this.unanchored);
     this.pill.showResult(response);
 
     const flagged = this.unanchored.size;
@@ -155,9 +205,16 @@ class Controller implements FactCheckController {
   teardown(): void {
     document.removeEventListener("click", this.onDocClick, true);
     document.removeEventListener("keydown", this.onDocKeydown, true);
+    document.removeEventListener("mousemove", this.onDocMouseMove, true);
+    document.removeEventListener("mouseover", this.onDocPointerOver, true);
+    document.removeEventListener("mouseout", this.onDocPointerOut, true);
+    document.removeEventListener("focusin", this.onDocFocusIn, true);
+    document.removeEventListener("focusout", this.onDocFocusOut, true);
+    window.removeEventListener("scroll", this.onWinScroll, true);
     this.observer?.disconnect();
     this.observer = null;
     if (this.reanchorTimer !== null) window.clearTimeout(this.reanchorTimer);
+    this.hovercard.destroy();
     this.highlights.destroy();
     this.panel.destroy();
     this.pill.destroy();
@@ -173,6 +230,102 @@ class Controller implements FactCheckController {
     });
     this.unanchored = new Set(unanchored);
     this.highlights.paint(ranges, this.statusById);
+  }
+
+  /** True when hover UX should stay out of the way (drawer open, pill dismissed). */
+  private hoverSuppressed(): boolean {
+    return this.pill.isDismissed || this.panel.open_;
+  }
+
+  /** Resolve the claim a pointer event lands on, span-path first then geometry. */
+  private claimFromPointer(e: MouseEvent): string | null {
+    return (
+      this.highlights.claimForNode(e.target) ??
+      this.highlights.claimAtPoint(e.clientX, e.clientY)
+    );
+  }
+
+  private showFor(claimId: string): void {
+    this.highlights.setHover(claimId);
+    this.hovercard.scheduleShow(claimId, this.highlights.rectFor(claimId));
+  }
+
+  private clearHover(): void {
+    this.highlights.setHover(null);
+    this.hovercard.scheduleHide();
+  }
+
+  private dismissPinned(): void {
+    this.hovercard.hide();
+    this.highlights.setActive(null);
+    this.highlights.setHover(null);
+  }
+
+  private togglePin(claimId: string): void {
+    if (this.hovercard.isPinned && this.hovercard.visibleClaimId === claimId) {
+      this.hovercard.hide();
+      this.highlights.setActive(null);
+      return;
+    }
+    this.highlights.setActive(claimId);
+    this.hovercard.pin(claimId, this.highlights.rectFor(claimId));
+  }
+
+  private handleDocMouseMove(e: MouseEvent): void {
+    if (this.hoverSuppressed() || this.hovercard.isHovered) return;
+    const now = Date.now();
+    if (now - this.lastMouseMoveAt < MOUSEMOVE_THROTTLE_MS) return;
+    this.lastMouseMoveAt = now;
+
+    const claimId = this.claimFromPointer(e);
+    if (claimId === this.lastPointerClaimId) return;
+    this.lastPointerClaimId = claimId;
+
+    if (claimId && !this.unanchored.has(claimId)) this.showFor(claimId);
+    else this.clearHover();
+  }
+
+  private handleDocPointerOver(e: MouseEvent): void {
+    if (this.hoverSuppressed()) return;
+    if (this.hovercard.contains(e.target)) {
+      this.hovercard.cancelHide();
+      return;
+    }
+    const claimId = this.highlights.claimForNode(e.target);
+    if (!claimId || this.unanchored.has(claimId)) return;
+    this.lastPointerClaimId = claimId;
+    this.showFor(claimId);
+  }
+
+  private handleDocPointerOut(e: MouseEvent): void {
+    if (this.hoverSuppressed()) return;
+    const to = e.relatedTarget;
+    if (this.hovercard.contains(to) || this.highlights.claimForNode(to)) return;
+    this.lastPointerClaimId = null;
+    this.clearHover();
+  }
+
+  private handleDocFocusIn(e: FocusEvent): void {
+    if (this.hoverSuppressed()) return;
+    const claimId = (e.target as HTMLElement | null)?.dataset?.dasfaxClaimId;
+    if (!claimId || this.unanchored.has(claimId)) return;
+    this.showFor(claimId);
+  }
+
+  private handleDocFocusOut(e: FocusEvent): void {
+    const claimId = (e.target as HTMLElement | null)?.dataset?.dasfaxClaimId;
+    if (!claimId) return;
+    this.clearHover();
+  }
+
+  private handleScroll(): void {
+    const shown = this.hovercard.visibleClaimId;
+    if (!shown) return;
+    if (this.hovercard.isPinned) {
+      this.hovercard.reposition(this.highlights.rectFor(shown));
+    } else {
+      this.hovercard.hide();
+    }
   }
 
   private startReanchorWatch(): void {
@@ -200,6 +353,7 @@ class Controller implements FactCheckController {
       this.anchorAndPaint();
       if (this.unanchored.size !== before) {
         this.panel.setData(this.response, this.unanchored);
+        this.hovercard.setData(this.response, this.unanchored);
         this.pill.showResult(this.response);
       }
       if (this.unanchored.size === 0) {
@@ -214,16 +368,15 @@ class Controller implements FactCheckController {
   }
 
   private handleDocClick(e: MouseEvent): void {
-    if (this.isOwnEvent(e.target) || this.pill.isDismissed) return;
+    if (this.pill.isDismissed) return;
+    // Clicks inside our own UI (pill, drawer, hovercard, source links) are
+    // handled by those components.
+    if (this.isOwnEvent(e.target)) return;
+
     // Let a real click on an inline link inside a highlighted sentence navigate.
     const target = e.target;
-    if (
-      target instanceof Element &&
-      target.closest("a[href]") &&
-      !this.shadow.host.contains(target)
-    ) {
-      return;
-    }
+    if (target instanceof Element && target.closest("a[href]")) return;
+
     const path = e.composedPath?.() ?? [];
     let claimId: string | null = null;
     for (const node of path) {
@@ -232,21 +385,31 @@ class Controller implements FactCheckController {
     }
     claimId ??= this.highlights.claimForNode(e.target);
     claimId ??= this.highlights.claimAtPoint(e.clientX, e.clientY);
-    if (!claimId) return;
+
+    if (!claimId) {
+      // A click anywhere off the claims dismisses a pinned card.
+      if (this.hovercard.isPinned) this.dismissPinned();
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
-    this.highlights.setActive(claimId);
-    this.panel.showClaim(claimId);
+    this.togglePin(claimId);
   }
 
   private handleDocKeydown(e: KeyboardEvent): void {
+    if (e.key === "Escape") {
+      if (this.hovercard.visibleClaimId) {
+        e.preventDefault();
+        this.dismissPinned();
+      }
+      return;
+    }
     if (e.key !== "Enter" && e.key !== " ") return;
-    const target = e.target as HTMLElement | null;
-    const claimId = target?.dataset?.dasfaxClaimId;
+    const claimId = (e.target as HTMLElement | null)?.dataset?.dasfaxClaimId;
     if (!claimId) return;
     e.preventDefault();
-    this.highlights.setActive(claimId);
-    this.panel.showClaim(claimId);
+    this.togglePin(claimId);
   }
 }
 

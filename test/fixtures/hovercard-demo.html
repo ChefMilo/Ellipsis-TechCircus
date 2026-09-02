@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hovercard demo — Dasfax WS2</title>
+  <style>
+    body { font: 17px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 680px; margin: 40px auto; padding: 0 20px; color: #1f2328; }
+    h1 { font-size: 28px; line-height: 1.25; }
+    .byline { color: #57606a; font-size: 14px; margin-bottom: 32px; }
+    p { margin: 0 0 20px; }
+    .spacer { height: 90vh; }
+    footer { color: #57606a; font-size: 13px; border-top: 1px solid #d0d7de; padding-top: 16px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <article>
+    <h1>Deepfake impersonation scams drove record losses in Singapore last year</h1>
+    <p class="byline">By Staff Reporter · 2 September 2026</p>
+
+    <!-- c1 sits high on the page on purpose: the hovercard should flip BELOW it. -->
+    <p>In one widely reported case, a Singapore businessman lost S$4.9 million after joining a Zoom call in which artificial intelligence was used to fabricate the likenesses of senior officials.</p>
+
+    <p>Investigators say the syndicates behind these operations have become markedly more sophisticated over the past eighteen months, blending social engineering with off-the-shelf generative tools.</p>
+
+    <p>According to a study, 79 per cent of Singaporeans are confident they can spot fake news.</p>
+
+    <p>That confidence is not always borne out in practice, and researchers have repeatedly warned about the gap between perceived and actual ability to detect manipulated media.</p>
+
+    <p>Victims lost a total of S$242.9 million to these scams last year, with an average loss of S$72,229 per victim.</p>
+
+    <p>The Singapore Police Force warned that deepfake AI fabrications can be sophisticated and difficult to distinguish from authentic content.</p>
+
+    <p>Honestly, this is the most alarming trend I have seen in years, and the authorities should do much more to stop it.</p>
+
+    <div class="spacer"></div>
+
+    <p>Scroll back up to a highlighted sentence after reading this far to check that a pinned card follows the text on scroll, while an un-pinned (hover-only) card is dismissed the moment the page scrolls.</p>
+
+    <footer>
+      Fixture for manually testing <code>src/content/render/hovercard.ts</code>.
+      Open with <code>?dasfaxMock=1</code> appended to the URL. The mock response
+      (<code>src/content/render/__mock__/mock-response.ts</code>) supplies the claims:
+      c1 contradicted, c2 partially&nbsp;supported, c3 supported, c5 not&nbsp;yet&nbsp;verified,
+      c6 opinion. A sixth claim (c7, "needs review") is intentionally absent from this
+      page to exercise the unanchored path — it shows only in the drawer.
+    </footer>
+  </article>
+</body>
+</html>

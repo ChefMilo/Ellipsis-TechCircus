@@ -17,6 +17,7 @@ import { STATUS, STATUS_KEYS, type StatusKey } from "./status-config";
 const PAGE_STYLE_ID = "dasfax-highlight-style";
 const HL_PREFIX = "dasfax-";
 const ACTIVE_HL = "dasfax-active";
+const HOVER_HL = "dasfax-hover";
 
 // The installed TS DOM lib ships an incomplete `HighlightRegistry` type and no
 // `Highlight` constructor. Narrow shims — all uses are runtime-guarded by
@@ -64,12 +65,14 @@ function buildPageStyle(): string {
   ).join("\n");
   return `
 ${hlRules}
+::highlight(${HOVER_HL}) { background-color: rgba(255, 214, 0, 0.22); }
 ::highlight(${ACTIVE_HL}) { background-color: rgba(255, 214, 0, 0.45); }
 .dasfax-hl {
   border-radius: 2px;
   cursor: pointer;
   padding-bottom: 1px;
 }
+.dasfax-hl.dasfax-hl--hover { outline: 1px solid #b08800; outline-offset: 1px; }
 .dasfax-hl.dasfax-hl--active { outline: 2px solid #b08800; outline-offset: 1px; }
 ${spanRules}
 `;
@@ -122,7 +125,7 @@ function wrapRange(
     span.setAttribute("tabindex", "0");
     span.setAttribute(
       "aria-label",
-      `Fact-check: ${STATUS[statusKey].label}. Activate to see evidence.`,
+      `Fact-check: ${STATUS[statusKey].label}. Hover or activate to see the evidence.`,
     );
     node.parentNode?.insertBefore(span, node);
     span.appendChild(node);
@@ -144,6 +147,7 @@ export class Highlights {
   private readonly useApi: boolean;
   private entries = new Map<string, Entry>();
   private activeId: string | null = null;
+  private hoverId: string | null = null;
 
   constructor(doc: Document = document) {
     this.doc = doc;
@@ -187,6 +191,13 @@ export class Highlights {
       reg.set(name, new Ctor(...ranges));
     }
 
+    // Hover emphasis paints under the click-pinned "active" emphasis.
+    reg.delete(HOVER_HL);
+    if (this.hoverId) {
+      const hovered = this.entries.get(this.hoverId);
+      if (hovered) reg.set(HOVER_HL, new Ctor(hovered.range));
+    }
+
     reg.delete(ACTIVE_HL);
     if (this.activeId) {
       const active = this.entries.get(this.activeId);
@@ -204,6 +215,28 @@ export class Highlights {
       const on = entry.claimId === claimId;
       for (const span of entry.spans) span.classList.toggle("dasfax-hl--active", on);
     }
+  }
+
+  /** Lighter, transient emphasis for the claim the pointer/focus is currently on. */
+  setHover(claimId: string | null): void {
+    if (this.hoverId === claimId) return;
+    this.hoverId = claimId;
+    if (this.useApi) {
+      this.syncApiHighlights();
+      return;
+    }
+    for (const entry of this.entries.values()) {
+      const on = entry.claimId === claimId;
+      for (const span of entry.spans) span.classList.toggle("dasfax-hl--hover", on);
+    }
+  }
+
+  /** Viewport-space bounding box of a claim's highlighted span, or null. */
+  rectFor(claimId: string): DOMRect | null {
+    const entry = this.entries.get(claimId);
+    // jsdom has no layout, so Range#getBoundingClientRect is absent there.
+    if (!entry || typeof entry.range.getBoundingClientRect !== "function") return null;
+    return entry.range.getBoundingClientRect();
   }
 
   /** claim id for a node inside a fallback highlight span, or null. */
@@ -262,10 +295,12 @@ export class Highlights {
     }
     this.entries.clear();
     this.activeId = null;
+    this.hoverId = null;
     if (this.useApi && typeof CSS !== "undefined" && "highlights" in CSS) {
       const reg = registry();
       for (const key of STATUS_KEYS) reg.delete(`${HL_PREFIX}${key}`);
       reg.delete(ACTIVE_HL);
+      reg.delete(HOVER_HL);
     }
   }
 

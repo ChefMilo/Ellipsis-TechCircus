@@ -7,8 +7,9 @@
  * whatever triggered the open.
  */
 import type { AnalysisResponse, VerifiedClaim } from "../../shared/contract";
-import { STATUS, statusKeyFor, type StatusTreatment } from "./status-config";
-import { focusables, h, hostnameOf, truncate } from "./dom";
+import { STATUS, statusKeyFor } from "./status-config";
+import { renderBadge as badge, renderSourcesList } from "./claim-view";
+import { focusables, h, truncate } from "./dom";
 
 export interface PanelCallbacks {
   /** Fired when the user selects a claim (row click / list keyboard). */
@@ -18,15 +19,6 @@ export interface PanelCallbacks {
 }
 
 type View = { kind: "list" } | { kind: "claim"; claimId: string };
-
-function badge(t: StatusTreatment): HTMLElement {
-  return h(
-    "span",
-    { class: "dasfax-badge", dataset: { status: t.key } },
-    h("span", { class: "dasfax-badge__icon", html: t.icon }),
-    t.label,
-  );
-}
 
 export class Panel {
   private readonly doc: Document;
@@ -301,53 +293,9 @@ export class Panel {
       );
     }
 
-    const sources = this.renderSources(vc);
+    const sources = renderSourcesList(vc);
     if (sources) frag.append(sources);
 
     return frag;
-  }
-
-  private renderSources(vc: VerifiedClaim): HTMLElement | null {
-    const citations = vc.assessment?.citations ?? [];
-    const rows =
-      citations.length > 0
-        ? citations.map((c) => ({
-            title: c.source_title ?? hostnameOf(c.source_url),
-            url: c.source_url,
-            snippet: c.snippet,
-          }))
-        : vc.claim.evidence.map((e) => ({
-            title: e.source_title ?? e.source_domain ?? hostnameOf(e.source_url),
-            url: e.source_url,
-            snippet: e.snippet,
-          }));
-
-    if (rows.length === 0) return null;
-
-    const list = h("ul", { class: "dasfax-sources" });
-    for (const r of rows) {
-      list.append(
-        h(
-          "li",
-          { class: "dasfax-source" },
-          h("a", {
-            class: "dasfax-source__title",
-            href: r.url,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            text: r.title,
-          }),
-          h("div", { class: "dasfax-source__domain", text: hostnameOf(r.url) }),
-          r.snippet && h("div", { class: "dasfax-source__snippet", text: truncate(r.snippet, 160) }),
-        ),
-      );
-    }
-
-    return h(
-      "div",
-      {},
-      h("div", { class: "dasfax-claim-detail__meta", text: `Sources (${rows.length})` }),
-      list,
-    );
   }
 }
