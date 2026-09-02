@@ -15,6 +15,11 @@ ruff>=0.6,<1.0
 #   pip install openai         # DASFAX_LLM_PROVIDER=openai / DASFAX_ASSESSOR_PROVIDER=openai
 #                              # (also drives Gemini/Groq via DASFAX_OPENAI_BASE_URL)
 #   pip install tavily-python  # DASFAX_SEARCH_PROVIDER=tavily
+#   pip install anthropic      # DASFAX_LLM_PROVIDER / _ASSESSOR_PROVIDER / _SEARCH_PROVIDER
+#                              # = anthropic. One package and ONE key covers read + verify
+#                              # + search, because Claude's web_search is a built-in
+#                              # server tool - no OpenAI and no Tavily account needed.
 #
 # openai>=1.30,<2.0
 # tavily-python>=0.5,<1.0
+# anthropic>=0.40
