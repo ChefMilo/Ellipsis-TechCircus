@@ -34,13 +34,22 @@ def _get_bool(name: str, default: bool = False) -> bool:
 # that speaks the same /chat/completions shape (Gemini, Groq, ...) is a base-URL swap.
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
+# Default model for the NATIVE anthropic providers (read + verify + search). Set
+# DASFAX_ANTHROPIC_MODEL to a model your key actually has access to.
+DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+
+# Anthropic's web_search is a dated SERVER TOOL and keys differ on which versions they
+# accept. The SDK also ships web_search_20260209 / web_search_20260318; this is the
+# long-standing one, overridable with DASFAX_ANTHROPIC_WEB_SEARCH_TOOL.
+DEFAULT_ANTHROPIC_WEB_SEARCH_TOOL = "web_search_20250305"
+
 
 @dataclass(frozen=True)
 class Settings:
     # Which backends to use. "mock" (default) needs no keys.
-    llm_provider: str = os.environ.get("DASFAX_LLM_PROVIDER", "mock")        # mock | openai
-    search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily
-    assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock | openai
+    llm_provider: str = os.environ.get("DASFAX_LLM_PROVIDER", "mock")        # mock | openai | anthropic
+    search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily | anthropic
+    assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock | openai | anthropic
 
     # Demo/presentation only. OFF by default; changes nothing about the normal mock run.
     # See app/clients/mock_search.py for exactly what it does and why.
@@ -53,6 +62,15 @@ class Settings:
     openai_base_url: str = os.environ.get("DASFAX_OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL)
     openai_model: str = os.environ.get("DASFAX_OPENAI_MODEL", "gpt-4o-mini")
     tavily_api_key: str | None = os.environ.get("TAVILY_API_KEY")
+
+    # NATIVE Anthropic (Messages API), used by all three "anthropic" providers. One key
+    # covers read + verify + search, because Claude's web_search is a built-in server tool
+    # — no OpenAI key and no Tavily key are read on that path.
+    anthropic_api_key: str | None = os.environ.get("ANTHROPIC_API_KEY")
+    anthropic_model: str = os.environ.get("DASFAX_ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL)
+    anthropic_web_search_tool: str = os.environ.get(
+        "DASFAX_ANTHROPIC_WEB_SEARCH_TOOL", DEFAULT_ANTHROPIC_WEB_SEARCH_TOOL
+    )
 
     # WS5 tuning knobs. These are the numbers to defend in the pitch.
     max_claims: int = _get_int("DASFAX_MAX_CLAIMS", 5)                       # top-N load-bearing claims (proposal: 3–5)
