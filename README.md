@@ -23,6 +23,8 @@ on a page that doesn't need one.
    BERT text classifier and an AI-generated-image CNN, run in parallel — and
    decides whether the page is worth the expense of Tier 3. Most pages stop here.
    That is the point of the cascade: Tier 3 costs seconds and real API spend.
+   **Off by default** (`DASFAX_TIER2_ENABLED=1`), because a page it clears is never
+   fact-checked at all — see [backend/WS4.md](backend/WS4.md).
 6. **Tier 3** extracts the article's load-bearing factual claims, retrieves
    evidence for each one, and returns a verdict per claim — which the
    extension paints back onto the live article as highlights, with a

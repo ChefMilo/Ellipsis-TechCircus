@@ -28,14 +28,23 @@ def _get_float(name: str, default: float) -> float:
 
 @dataclass(frozen=True)
 class OrchestratorSettings:
-    # Tier 2 (BERT text classifier + AI-generated-image detector) does not exist in
-    # this tree -- see docs/ws3/RECON.md §6 / §10.2. The branch that has it
-    # (ws4-tier2-screening) is 11 commits ahead of main, 13 behind, unmerged, and its
-    # own commit history says the fine-tuned text checkpoint flags 83% of real news as
-    # fake (docs/ws3/RECON.md §10.3). Defaulting this OFF is a safety decision, not a
-    # placeholder oversight: flipping it on today does not run real Tier 2 screening
-    # (see orchestrator/tier2.py's module docstring), it only activates a seam that
-    # still falls straight through to Tier 3.
+    # Tier 2 screening gate (app/orchestrator/tier2.py -> app/pipeline/ws4.py): a
+    # fine-tuned BERT text classifier plus an AI-generated-image CNN, in parallel, inside
+    # a ~750ms budget. When it clears a page, Tier 3 NEVER RUNS for that page and the
+    # reader gets UNRATED with the reason in the summary.
+    #
+    # OFF by default, and that is a product decision rather than a doubt about the wiring.
+    # Turning it on is what the cascade is for -- it is the only thing that makes Tier 3's
+    # ~120s and per-article API spend conditional instead of universal -- but it changes
+    # what the product DOES: the text half flags roughly 0-11% of ordinary news (0.0% on
+    # the heuristic, 10.6% on our fine-tune, measured over 480 AG News articles), so with
+    # this on, most real articles stop here and are never fact-checked at all. That is
+    # correct cascade behaviour and the wrong thing to discover during a live demo.
+    #
+    # The 83% figure in docs/ws3/RECON.md §10.3 refers to omykhailiv/bert-fake-news-
+    # recognition off the shelf, which is why that checkpoint was abandoned; it does not
+    # describe what runs today. See backend/WS4.md for what the shipped models do and do
+    # not detect. 1/true/yes/on to enable.
     tier2_enabled: bool = _get_bool("DASFAX_TIER2_ENABLED", False)
 
     # Wall-clock budget for the Tier 3 step (run_ws5 + WS6 assessment) inside one
@@ -54,6 +63,14 @@ class OrchestratorSettings:
     # than the client aborting blind and reporting a generic "unreachable". Raise both,
     # in that order, if you raise either.
     tier3_timeout_s: float = _get_float("DASFAX_TIER3_TIMEOUT_S", 120.0)
+
+    # Outer wall-clock bound on the Tier 2 screen, in seconds. WS4 already enforces its
+    # own deadline internally (DASFAX_SCREEN_BUDGET_MS, 750ms by default); this is the
+    # orchestrator's independent guard for the case where that deadline does not hold --
+    # a wedged image fetch, a model load on a cold cache. Comfortably above WS4's budget
+    # so it never fires in normal operation, and low enough that a hung screen costs the
+    # request far less than Tier 3's own 120s. Exceeding it fails open to Tier 3.
+    tier2_timeout_s: float = _get_float("DASFAX_TIER2_TIMEOUT_S", 5.0)
 
     # How long a successfully-assembled AnalysisResponse is served from the in-memory
     # cache before a repeat (url, text) request re-runs Tier 3. Failed results are
