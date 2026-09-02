@@ -13,8 +13,9 @@ ruff>=0.6,<1.0
 # imports its SDK lazily. Install only when switching a provider on:
 #
 #   pip install openai         # DASFAX_LLM_PROVIDER=openai / DASFAX_ASSESSOR_PROVIDER=openai
-#                              # (also drives Gemini/Groq via DASFAX_OPENAI_BASE_URL)
-#   pip install tavily-python  # DASFAX_SEARCH_PROVIDER=tavily
+#                              # (also drives Gemini/Groq via DASFAX_OPENAI_BASE_URL,
+#                              #  and DASFAX_SEARCH_PROVIDER=openai web search)
+#   pip install tavily-python  # DASFAX_SEARCH_PROVIDER=tavily only
 #
 # openai>=1.30,<2.0
 # tavily-python>=0.5,<1.0

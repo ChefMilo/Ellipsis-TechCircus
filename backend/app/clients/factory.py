@@ -30,7 +30,15 @@ def make_search_client(settings: Settings | None = None) -> SearchClient:
     if settings.search_provider == "tavily":
         from app.clients.tavily_search import TavilySearchClient
         return TavilySearchClient(settings)
-    raise ValueError(f"Unknown DASFAX_SEARCH_PROVIDER={settings.search_provider!r} (expected 'mock' or 'tavily')")
+    if settings.search_provider == "openai":
+        # OpenAI's hosted web search: no second vendor, no Tavily key. Unlike the other
+        # two "openai" providers this one needs the real OpenAI endpoint.
+        from app.clients.openai_search import OpenAISearchClient
+        return OpenAISearchClient(settings)
+    raise ValueError(
+        f"Unknown DASFAX_SEARCH_PROVIDER={settings.search_provider!r} "
+        "(expected 'mock', 'tavily' or 'openai')"
+    )
 
 
 def make_assessor_client(settings: Settings | None = None) -> AssessorClient:

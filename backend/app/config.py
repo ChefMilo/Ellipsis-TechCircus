@@ -34,12 +34,17 @@ def _get_bool(name: str, default: bool = False) -> bool:
 # that speaks the same /chat/completions shape (Gemini, Groq, ...) is a base-URL swap.
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
+# Model used by the OpenAI web-search provider. Separate from DASFAX_OPENAI_MODEL because
+# hosted web search is offered on only some OpenAI models, while DASFAX_OPENAI_MODEL may
+# legitimately name a Gemini/Groq model for extraction and assessment.
+DEFAULT_OPENAI_SEARCH_MODEL = "gpt-4o"
+
 
 @dataclass(frozen=True)
 class Settings:
     # Which backends to use. "mock" (default) needs no keys.
     llm_provider: str = os.environ.get("DASFAX_LLM_PROVIDER", "mock")        # mock | openai
-    search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily
+    search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily | openai
     assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock | openai
 
     # Demo/presentation only. OFF by default; changes nothing about the normal mock run.
@@ -52,6 +57,9 @@ class Settings:
     openai_api_key: str | None = os.environ.get("OPENAI_API_KEY")
     openai_base_url: str = os.environ.get("DASFAX_OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL)
     openai_model: str = os.environ.get("DASFAX_OPENAI_MODEL", "gpt-4o-mini")
+    # DASFAX_SEARCH_PROVIDER=openai only. Hosted web search is an OpenAI feature, not part
+    # of the wire format, so this one does NOT work against a Gemini/Groq base URL.
+    openai_search_model: str = os.environ.get("DASFAX_OPENAI_SEARCH_MODEL", DEFAULT_OPENAI_SEARCH_MODEL)
     tavily_api_key: str | None = os.environ.get("TAVILY_API_KEY")
 
     # WS5 tuning knobs. These are the numbers to defend in the pitch.
