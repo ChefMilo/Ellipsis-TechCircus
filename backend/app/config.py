@@ -95,6 +95,16 @@ class Settings:
     # markers it looks for, so that number is circular and its true recall is unknown.
     screening_mode: str = "heuristic"
 
+    # Per-component overrides. The text and image halves of Tier 2 are in very different
+    # states — the image CNN measurably works (AUROC 0.821) while no text checkpoint does —
+    # so a single mode for both would force us to disable a working model to disable a
+    # broken one. Empty means "use screening_mode".
+    #
+    # SHIPPED CONFIGURATION: text=heuristic, image=auto. That is the best available
+    # combination of the two, and each half is set from its own evidence.
+    text_mode: str = ""      # heuristic | auto | huggingface  (default: screening_mode)
+    image_mode: str = "auto"  # heuristic | auto | huggingface
+
     # Operating thresholds. Measured, not guessed:
     #
     #   python ws4_eval.py --backend huggingface
@@ -187,6 +197,16 @@ class Settings:
     allow_model_download: bool = True      # False = only use weights already in the HF cache
 
 
+def effective_text_mode(s: Settings) -> str:
+    """Mode for the text half; falls back to screening_mode when unset."""
+    return s.text_mode or s.screening_mode
+
+
+def effective_image_mode(s: Settings) -> str:
+    """Mode for the image half; falls back to screening_mode when unset."""
+    return s.image_mode or s.screening_mode
+
+
 def get_settings() -> Settings:
     """Build Settings from the current environment. Cheap; call it per request."""
     return Settings(
@@ -201,6 +221,8 @@ def get_settings() -> Settings:
         dedup_threshold=_get_float("DASFAX_DEDUP_THRESHOLD", 0.85),
         anchor_min_similarity=_get_float("DASFAX_ANCHOR_MIN_SIMILARITY", 0.5),
         screening_mode=_get_str("DASFAX_SCREENING_MODE", "heuristic"),
+        text_mode=_get_str("DASFAX_TEXT_MODE", ""),
+        image_mode=_get_str("DASFAX_IMAGE_MODE", "auto"),
         text_threshold=_get_float("DASFAX_TEXT_THRESHOLD", 0.40),
         image_threshold=_get_float("DASFAX_IMAGE_THRESHOLD", 0.70),
         bert_model_name=_get_str("DASFAX_BERT_MODEL_NAME", "omykhailiv/bert-fake-news-recognition"),

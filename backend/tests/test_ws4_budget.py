@@ -186,13 +186,20 @@ def test_pixel_backend_scores_successfully_fetched_images():
 
 
 def test_url_only_backend_never_fetches():
-    """The heuristic backend declares needs_pixels=False, which is what keeps CI offline."""
+    """The heuristic backend declares needs_pixels=False, which is what keeps CI offline.
+
+    image_mode is pinned explicitly: the shipped default is "auto" (the CNN works even
+    though no text checkpoint does), so relying on screening_mode alone would build a
+    pixel backend here and reach the network.
+    """
 
     def exploding_fetcher(urls, **_kw):
         raise AssertionError("a URL-only backend must not trigger any network fetch")
 
     result = ws4.run_ws4(
-        _page(), settings=Settings(screening_mode="heuristic"), fetcher=exploding_fetcher
+        _page(),
+        settings=Settings(screening_mode="heuristic", image_mode="heuristic"),
+        fetcher=exploding_fetcher,
     )
     assert result.model_meta["images_screened"] == 6
 

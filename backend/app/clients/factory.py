@@ -9,7 +9,7 @@ from app.clients.base import LLMClient, SearchClient
 from app.clients.mock_llm import MockLLMClient
 from app.clients.mock_search import MockSearchClient
 from app.clients.screening_base import ImageScorer, TextScorer
-from app.config import Settings, get_settings
+from app.config import Settings, effective_image_mode, effective_text_mode, get_settings
 
 # The heuristic screening backends are imported lazily inside the factory functions below,
 # like the other concrete providers in this file. Importing them at module level would
@@ -43,13 +43,10 @@ def make_search_client(settings: Settings | None = None) -> SearchClient:
 _SCREENING_MODES = ("auto", "huggingface", "heuristic")
 
 
-def _check_mode(settings: Settings) -> str:
-    if settings.screening_mode not in _SCREENING_MODES:
-        raise ValueError(
-            f"Unknown DASFAX_SCREENING_MODE={settings.screening_mode!r} "
-            f"(expected one of {', '.join(_SCREENING_MODES)})"
-        )
-    return settings.screening_mode
+def _check_mode(mode: str, var: str) -> str:
+    if mode not in _SCREENING_MODES:
+        raise ValueError(f"Unknown {var}={mode!r} (expected one of {', '.join(_SCREENING_MODES)})")
+    return mode
 
 
 def make_text_scorer(settings: Settings | None = None, *, strict: bool = False) -> TextScorer:
@@ -60,12 +57,12 @@ def make_text_scorer(settings: Settings | None = None, *, strict: bool = False) 
     that is actually a regex — the single easiest way to publish a number that is a lie.
     """
     settings = settings or get_settings()
-    mode = _check_mode(settings)
+    mode = _check_mode(effective_text_mode(settings), "DASFAX_TEXT_MODE")
     from app.clients.heuristic_screening import HeuristicTextScorer
 
     if mode == "heuristic":
         if strict:
-            raise RuntimeError("strict=True but DASFAX_SCREENING_MODE=heuristic; refusing to report on the fallback")
+            raise RuntimeError("strict=True but this component is in heuristic mode; refusing to report on the fallback")
         return HeuristicTextScorer()
 
     try:
@@ -81,12 +78,12 @@ def make_text_scorer(settings: Settings | None = None, *, strict: bool = False) 
 def make_image_scorer(settings: Settings | None = None, *, strict: bool = False) -> ImageScorer:
     """Build the Tier 2 image scorer. See `make_text_scorer` for the strict contract."""
     settings = settings or get_settings()
-    mode = _check_mode(settings)
+    mode = _check_mode(effective_image_mode(settings), "DASFAX_IMAGE_MODE")
     from app.clients.heuristic_screening import HeuristicImageScorer
 
     if mode == "heuristic":
         if strict:
-            raise RuntimeError("strict=True but DASFAX_SCREENING_MODE=heuristic; refusing to report on the fallback")
+            raise RuntimeError("strict=True but this component is in heuristic mode; refusing to report on the fallback")
         return HeuristicImageScorer()
 
     try:

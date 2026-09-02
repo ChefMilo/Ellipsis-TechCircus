@@ -18,5 +18,10 @@ def _offline_screening(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureR
     if request.node.get_closest_marker("models"):
         return
     monkeypatch.setenv("DASFAX_SCREENING_MODE", "heuristic")
+    # Both halves explicitly: the image component defaults to "auto" in the shipped
+    # configuration (the CNN works; no text checkpoint does), so pinning only the global
+    # mode would leave tests downloading weights and hitting the network.
+    monkeypatch.setenv("DASFAX_TEXT_MODE", "heuristic")
+    monkeypatch.setenv("DASFAX_IMAGE_MODE", "heuristic")
     monkeypatch.setenv("DASFAX_ALLOW_MODEL_DOWNLOAD", "0")
     monkeypatch.setenv("DASFAX_WARMUP", "0")
