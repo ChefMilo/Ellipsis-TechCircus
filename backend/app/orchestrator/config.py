@@ -39,13 +39,21 @@ class OrchestratorSettings:
     tier2_enabled: bool = _get_bool("DASFAX_TIER2_ENABLED", False)
 
     # Wall-clock budget for the Tier 3 step (run_ws5 + WS6 assessment) inside one
-    # /analyze call. Generous for the mock backends (near-instant) while still
-    # bounding a hung real provider call (OpenAI / Tavily) to something the
-    # extension's own UX can tolerate (backend-client.ts's own client-side timeout
-    # defaults to 15s -- this is deliberately shorter so the backend fails the request
-    # itself, with a real errors[] entry, well before the extension's own timeout
-    # would fire and mask it as a generic "unreachable").
-    tier3_timeout_s: float = _get_float("DASFAX_TIER3_TIMEOUT_S", 8.0)
+    # /analyze call. Near-instant on the mock backends; sized for the REAL provider
+    # path, which is sequential by construction -- app/pipeline/ws5.py loops one search
+    # per kept claim and app/services/assessment.py loops one assessment per claim, so
+    # DASFAX_MAX_CLAIMS=5 means ~11 model calls end to end, several of them web
+    # searches. The previous 8s budget could not finish that, and a timeout is not a
+    # loud failure here: pipeline.py returns a perfectly valid envelope reading
+    # UNRATED / "nothing checked", which on screen is indistinguishable from "this
+    # article had no checkable claims". Tune per venue with DASFAX_TIER3_TIMEOUT_S.
+    #
+    # Stays BELOW the extension's own client-side timeout (src/background/config.ts's
+    # DEFAULT_TIMEOUT_MS, 130000ms) on purpose, so the backend fails the request first
+    # and answers with errors[{code: "tier3_timeout"}] -- a diagnosable cause -- rather
+    # than the client aborting blind and reporting a generic "unreachable". Raise both,
+    # in that order, if you raise either.
+    tier3_timeout_s: float = _get_float("DASFAX_TIER3_TIMEOUT_S", 120.0)
 
     # How long a successfully-assembled AnalysisResponse is served from the in-memory
     # cache before a repeat (url, text) request re-runs Tier 3. Failed results are

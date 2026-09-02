@@ -34,7 +34,7 @@ ARTICLE_TEXT = (
 
 
 def _settings(**overrides: object) -> OrchestratorSettings:
-    base: dict[str, object] = dict(tier2_enabled=False, tier3_timeout_s=8.0, cache_ttl_s=300.0)
+    base: dict[str, object] = dict(tier2_enabled=False, tier3_timeout_s=120.0, cache_ttl_s=300.0)
     base.update(overrides)
     return OrchestratorSettings(**base)  # type: ignore[arg-type]
 

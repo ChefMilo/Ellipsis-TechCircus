@@ -181,7 +181,7 @@ never `os.environ` themselves).
 | 12 | `DASFAX_DEDUP_THRESHOLD` | `app/config.py` | `0.85` |
 | 13 | `DASFAX_ANCHOR_MIN_SIMILARITY` | `app/config.py` | `0.5` |
 | 14 | `DASFAX_TIER2_ENABLED` | `app/orchestrator/config.py` | off |
-| 15 | `DASFAX_TIER3_TIMEOUT_S` | `app/orchestrator/config.py` | `8.0` |
+| 15 | `DASFAX_TIER3_TIMEOUT_S` | `app/orchestrator/config.py` | `120.0` |
 | 16 | `DASFAX_CACHE_TTL_S` | `app/orchestrator/config.py` | `300.0` |
 
 The checked-in `backend/.env.example` (from real-providers) was missing #4, #6 (partially — had the key/model but not the base-URL var name check), #13, and obviously #14-16 (didn't exist yet). Rewritten to list all 16, one comment each, grouped by the two files that own them (WS5/WS6 vs WS3), each comment naming the file it reads from and, for the orchestrator vars, citing why the Tier 2 default is off.
