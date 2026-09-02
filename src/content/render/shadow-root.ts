@@ -90,6 +90,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .dasfax-pill[data-level="caution"] .dasfax-pill__dot { background: var(--dasfax-partially_supported-accent); }
 .dasfax-pill[data-level="high_risk"] .dasfax-pill__dot { background: var(--dasfax-contradicted-accent); }
 .dasfax-pill[data-level="trusted"] .dasfax-pill__dot { background: var(--dasfax-supported-accent); }
+.dasfax-pill[data-level="unrated"] .dasfax-pill__dot { background: var(--dasfax-muted); }
 .dasfax-pill__text { font-weight: 600; white-space: nowrap; }
 .dasfax-pill__sub { color: var(--dasfax-muted); font-weight: 400; }
 .dasfax-pill__dismiss {

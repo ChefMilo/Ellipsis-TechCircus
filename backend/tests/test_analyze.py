@@ -19,6 +19,7 @@ from app.services.envelope import (
     PENDING_VERDICT_LEVEL,
     PENDING_VERDICT_SUMMARY,
     to_analysis_response,
+    unrated_verdict,
 )
 
 client = TestClient(app)
@@ -36,7 +37,7 @@ ASSESSMENT_STATUSES = {
     "opinion",
 }
 ANALYSIS_STATUSES = {"complete", "processing", "failed", "skipped"}
-VERDICT_LEVELS = {"trusted", "ok", "caution", "high_risk"}
+VERDICT_LEVELS = {"trusted", "ok", "caution", "high_risk", "unrated"}
 
 
 def assert_passes_ws2_guard(body: object) -> None:
@@ -228,6 +229,21 @@ def test_to_analysis_response_on_empty_result():
         ClaimExtractionResult(url="https://news.example.org/empty"), status="complete"
     )
     assert envelope.verifiedClaims == []
+    assert envelope.articleVerdict.level == "unrated"
+    assert_passes_ws2_guard(envelope.model_dump(mode="json"))
+
+
+def test_to_analysis_response_accepts_an_article_verdict_override():
+    # WS4's non-escalated path: the verdict is decided outside Tier 3, and the caller's
+    # reason string rides along.
+    reason = "A quick scan found nothing that needed a full fact-check."
+    envelope = to_analysis_response(
+        ClaimExtractionResult(url="https://news.example.org/screened"),
+        status="complete",
+        article_verdict=unrated_verdict(reason),
+    )
+    assert envelope.articleVerdict.level == "unrated"
+    assert envelope.articleVerdict.summary == reason
     assert_passes_ws2_guard(envelope.model_dump(mode="json"))
 
 
@@ -277,6 +293,8 @@ def test_analyze_is_deterministic(article_text: str):
 def test_no_content_envelope_is_never_a_clean_bill_of_health():
     body = client.post("/analyze", json={"url": "https://news.example.org/x"}).json()
     assert body["verifiedClaims"] == []
-    # Nothing was checked, so the pill must not read as "ok".
+    # Nothing was fact-checked, so the neutral level, never "ok".
+    assert body["articleVerdict"]["level"] == "unrated"
     assert body["articleVerdict"]["level"] != "ok"
-    assert body["articleVerdict"]["summary"] == PENDING_VERDICT_SUMMARY
+    # A real reason, not the empty string — the exact wording is the caller's to set.
+    assert body["articleVerdict"]["summary"].strip()

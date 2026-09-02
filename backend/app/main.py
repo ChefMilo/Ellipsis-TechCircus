@@ -32,7 +32,7 @@ from app.models.contract import (
 )
 from app.pipeline.ws5 import run_ws5
 from app.services.assessment import assess_claims
-from app.services.envelope import pending_verdict, to_analysis_response
+from app.services.envelope import to_analysis_response, unrated_verdict
 
 app = FastAPI(
     title="Dasfax WS5 — Claim Extraction & Evidence Retrieval",
@@ -97,9 +97,10 @@ def analyze(request: AnalysisRequest) -> AnalysisResponse:
             schemaVersion="1.0",
             url=request.url,
             # Not SKIPPED: WS2 reads that as "Tier 0 trusted source" and paints the
-            # trusted pill. COMPLETE with zero claims renders "No checkable claims found".
+            # trusted pill. COMPLETE with the UNRATED verdict renders the neutral
+            # "not fact-checked" pill.
             status=AnalysisStatus.COMPLETE,
-            articleVerdict=pending_verdict(),
+            articleVerdict=unrated_verdict("No article text was supplied, so nothing was fact-checked."),
             verifiedClaims=[],
             errors=[
                 AnalysisError(

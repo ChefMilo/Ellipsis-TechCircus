@@ -5,9 +5,14 @@ WS5 produces a `ClaimExtractionResult` (claims + stats + provenance) and WS6 pro
 `isAnalysisResponse()` guard drops anything else on the floor. This module is the seam —
 pure, no I/O.
 
-It also computes the article-level rollup from the real verdicts. The one rule that
-matters there: never report OK unless something was actually supported. An unverifiable
-page must not look like a clean bill of health.
+It also computes the article-level rollup from the real verdicts. Two rules matter there:
+
+  1. Never report OK unless something was actually supported. An unverifiable page must
+     not look like a clean bill of health.
+  2. OK is a Tier 3 result only. It means "claims were checked and at least one holds
+     up", and `article_verdict_for()` is the only thing that may produce it. Any path
+     that stops before Tier 3 — Tier 2 screened and cleared, no article text, no
+     checkable claims — reports UNRATED, with the reason in `ArticleVerdict.summary`.
 """
 from __future__ import annotations
 
@@ -25,13 +30,13 @@ from app.models.contract import (
     VerifiedClaim,
 )
 
-# WS2's ArticleVerdictLevel union has no "unrated"/"pending" member, and inventing one
-# would fail its guard (a dedicated level is being requested from WS2 separately). Until
-# then CAUTION is the honest stand-in for "we cannot rate this": OK would read as a clean
-# bill of health for a page nothing is known about, and TRUSTED is reserved for Tier 0
-# whitelisted domains.
-PENDING_VERDICT_LEVEL = ArticleVerdictLevel.CAUTION
-PENDING_VERDICT_SUMMARY = "Nothing on this page has been verified."
+# UNRATED is WS2's neutral level for "there was nothing here to fact-check" — no article
+# text, zero checkable claims, or a Tier 2 pass that cleared the page without escalating.
+# OK would read as a clean bill of health for a page nothing was verified about; CAUTION
+# would read as a warning about an innocent non-article page; TRUSTED is reserved for
+# Tier 0 whitelisted domains. Callers pass their own `summary` to say which case it is.
+PENDING_VERDICT_LEVEL = ArticleVerdictLevel.UNRATED
+PENDING_VERDICT_SUMMARY = "There was nothing on this page to fact-check."
 
 UNVERIFIED_SUMMARY = "No claim on this page could be verified against retrieved sources."
 
@@ -46,9 +51,17 @@ _SUMMARY_LABELS: tuple[tuple[AssessmentStatus, str], ...] = (
 )
 
 
-def pending_verdict() -> ArticleVerdict:
-    """Verdict used when there is nothing to rate at all (no text, or no claims)."""
-    return ArticleVerdict(level=PENDING_VERDICT_LEVEL, summary=PENDING_VERDICT_SUMMARY)
+def unrated_verdict(summary: str = PENDING_VERDICT_SUMMARY) -> ArticleVerdict:
+    """The neutral verdict, for any path that ends before a Tier 3 rollup.
+
+    Pass `summary` to say why nothing was fact-checked (no text, no checkable claims,
+    Tier 2 cleared it). The default covers the plain "nothing to rate" case.
+    """
+    return ArticleVerdict(level=PENDING_VERDICT_LEVEL, summary=summary)
+
+
+# Legacy name kept so existing imports keep working; prefer unrated_verdict().
+pending_verdict = unrated_verdict
 
 
 def _summarize(counts: Counter[AssessmentStatus]) -> str:
@@ -74,7 +87,7 @@ def article_verdict_for(assessments: Iterable[Assessment]) -> ArticleVerdict:
     """
     counts = Counter(a.status for a in assessments)
     if not counts.total():
-        return pending_verdict()
+        return unrated_verdict()
 
     summary = _summarize(counts)
 
@@ -97,6 +110,7 @@ def to_analysis_response(
     *,
     status: AnalysisStatus | str = AnalysisStatus.COMPLETE,
     assessments: dict[str, Assessment] | None = None,
+    article_verdict: ArticleVerdict | None = None,
 ) -> AnalysisResponse:
     """Adapt a `ClaimExtractionResult` (+ optional WS6 assessments) into the
     `AnalysisResponse` WS2 expects.
@@ -104,6 +118,11 @@ def to_analysis_response(
     `assessments` is keyed by `claim.id`. Omitting it keeps the pre-WS6 behaviour —
     every claim unassessed and the placeholder verdict — which is still what callers
     that only run WS5 should get.
+
+    `article_verdict` overrides the rollup entirely. It is for callers that decided the
+    verdict outside Tier 3 — e.g. WS4 handing back an UNRATED envelope for a page it
+    screened and did not escalate. When given, `assessments` is still used for the
+    per-claim data but not for the article level.
 
     Claim order is preserved (WS5 already ranks them, rank 1 first) because WS2's panel
     sorts by `claim.rank` and the pill reports counts in this order.
@@ -113,11 +132,14 @@ def to_analysis_response(
         VerifiedClaim(claim=claim, assessment=by_id.get(claim.id)) for claim in result.claims
     ]
 
-    verdict = (
-        article_verdict_for([vc.assessment for vc in verified if vc.assessment is not None])
-        if by_id
-        else pending_verdict()
-    )
+    if article_verdict is not None:
+        verdict = article_verdict
+    elif by_id:
+        verdict = article_verdict_for(
+            [vc.assessment for vc in verified if vc.assessment is not None]
+        )
+    else:
+        verdict = unrated_verdict()
 
     return AnalysisResponse(
         schemaVersion="1.0",

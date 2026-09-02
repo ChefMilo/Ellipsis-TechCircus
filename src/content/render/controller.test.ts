@@ -84,6 +84,24 @@ describe("mountFactCheckUI", () => {
     expect(document.querySelectorAll("[data-dasfax-claim-id]")).toHaveLength(0);
   });
 
+  it("shows the unrated state when nothing on the page was fact-checked", () => {
+    document.body.innerHTML = ARTICLE_HTML;
+    controller = mountFactCheckUI({ articleRoot: document.body });
+    const summary = "A quick scan found nothing that needed a full fact-check.";
+    controller.render({
+      ...MOCK_ANALYSIS,
+      status: "complete",
+      articleVerdict: { level: "unrated", summary },
+      verifiedClaims: [],
+    });
+    const pill = shadow().querySelector(".dasfax-pill");
+    expect(pill?.getAttribute("data-level")).toBe("unrated");
+    expect(pill?.textContent).toContain("Not fact-checked");
+    // The pill stays a terse label; the per-case reason (`summary`) shows in the panel.
+    expect(pill?.querySelector(".dasfax-pill__button")?.tagName).toBe("SPAN");
+    expect(document.querySelectorAll("[data-dasfax-claim-id]")).toHaveLength(0);
+  });
+
   it("shows the trusted state for a skipped response", () => {
     document.body.innerHTML = ARTICLE_HTML;
     controller = mountFactCheckUI({ articleRoot: document.body });

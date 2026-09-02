@@ -13,6 +13,12 @@ describe("isAnalysisResponse", () => {
     expect(isAnalysisResponse(r)).toBe(true);
   });
 
+  it("accepts the unrated verdict level", () => {
+    const r = structuredClone(MOCK_ANALYSIS);
+    r.articleVerdict = { level: "unrated", summary: "Nothing on this page was checked." };
+    expect(isAnalysisResponse(r)).toBe(true);
+  });
+
   it("rejects a wrong schemaVersion", () => {
     const r = { ...structuredClone(MOCK_ANALYSIS), schemaVersion: "2.0" };
     expect(isAnalysisResponse(r)).toBe(false);

@@ -204,16 +204,20 @@ class AnalysisStatus(StrEnum):
 class ArticleVerdictLevel(StrEnum):
     """WS2's `ArticleVerdictLevel` union, verbatim.
 
-    NOTE: there is deliberately no "unrated"/"pending" member. Until WS6 exists the
-    backend has no article-level judgement to report, so it sends the most neutral
-    value in the union (OK) and says so in `ArticleVerdict.summary`. See
-    app/services/envelope.py.
+    OK/CAUTION/HIGH_RISK are Tier 3 rollups: `article_verdict_for()` derives them from
+    the per-claim verdicts and nothing else may produce OK — it means "claims were
+    checked and at least one holds up". UNRATED is the neutral state for every path that
+    ends before a Tier 3 rollup: no article text, zero checkable claims, or a Tier 2
+    screen that cleared the page without escalating. It is not a clean bill of health and
+    not a warning; the reason for it rides in `ArticleVerdict.summary`. TRUSTED is Tier 0
+    (whitelisted domain). See app/services/envelope.py.
     """
 
     TRUSTED = "trusted"
     OK = "ok"
     CAUTION = "caution"
     HIGH_RISK = "high_risk"
+    UNRATED = "unrated"
 
 
 class ArticleVerdict(BaseModel):

@@ -13,7 +13,7 @@ export interface PillCallbacks {
   onDismiss?(): void;
 }
 
-type Level = "neutral" | "trusted" | "ok" | "caution" | "high_risk";
+type Level = "neutral" | "trusted" | "ok" | "caution" | "high_risk" | "unrated";
 
 const CHECK_ICON =
   '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M13.5 3.5 6 11 2.5 7.5 1 9l5 5 9-9z"/></svg>';
@@ -55,6 +55,14 @@ export class Pill {
       response.articleVerdict.level === "trusted"
         ? "trusted"
         : (response.articleVerdict.level as Level);
+
+    if (level === "unrated") {
+      // Nothing on the page was fact-checked — no article text, no checkable claims,
+      // or a Tier 2 screen that cleared it. Neutral grey; the specific reason is in
+      // articleVerdict.summary, which the panel shows. Nothing to open.
+      this.paint({ level, text: "Not fact-checked" });
+      return;
+    }
 
     let text: string;
     let sub: string | undefined;

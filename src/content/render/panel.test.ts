@@ -52,6 +52,26 @@ describe("Panel", () => {
     expect(layer.querySelector(".dasfax-claim-detail__unanchored")).not.toBeNull();
   });
 
+  it("shows the article verdict summary and an empty-state line when there are no claims", () => {
+    document.body.innerHTML = "";
+    const layer = document.createElement("div");
+    document.body.append(layer);
+    const panel = new Panel(layer, {});
+    const summary = "A quick scan found nothing that needed a full fact-check.";
+    panel.setData(
+      {
+        ...MOCK_ANALYSIS,
+        articleVerdict: { level: "unrated", summary },
+        verifiedClaims: [],
+      },
+      [],
+    );
+    panel.open();
+    expect(layer.querySelector(".dasfax-verdict")?.textContent).toBe(summary);
+    expect(layer.querySelectorAll(".dasfax-claim-row")).toHaveLength(0);
+    expect(layer.textContent).toContain("No checkable claims were found");
+  });
+
   it("closes on Escape", () => {
     const { panel, layer } = makePanel();
     panel.open();
