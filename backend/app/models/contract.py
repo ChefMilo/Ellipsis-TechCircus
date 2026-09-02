@@ -247,6 +247,26 @@ class AnalysisRequest(BaseModel):
     title: str | None = Field(None, description="Page/article title, if the content script has one.")
     text: str | None = Field(None, description="Cleaned article body text (WS1 `bodyText`). Absent until WS1 forwards it.")
     images: list[str] | None = Field(None, description="Article image URLs. Unused by WS5 today; carried for WS6.")
+    published_at: datetime | None = Field(
+        None,
+        description=(
+            "Publish timestamp, if the content script's extractor found one (WS1 "
+            "`publishDate`). Threaded through to ArticleInput.published_at by "
+            "app/orchestrator/pipeline.py. Previously silently dropped by Pydantic's "
+            "default extra=\"ignore\" behaviour, since this field didn't exist here at "
+            "all -- see docs/ws3/WS3-CONTRACT-AUDIT.md Task C / docs/ws3/WS3-MESSAGE-HOP.md Task 6."
+        ),
+    )
+    source_domain: str | None = Field(
+        None,
+        description=(
+            "Hostname the content script computed client-side (WS1 `sourceDomain`). "
+            "Accepted for provenance/debugging but NOT authoritative: "
+            "app/orchestrator/pipeline.py derives ArticleInput.source_domain from "
+            "`url` server-side instead (same as before this field existed), so this "
+            "value is currently informational only."
+        ),
+    )
 
 
 class AnalysisResponse(BaseModel):

@@ -1,0 +1,42 @@
+# Dasfax backend, local/dev stack. `docker compose up --build` from the repo root.
+#
+# Env is passed IN, never baked into the image: everything the app reads comes from
+# backend/.env (created by the user from backend/.env.example — see DEMO.md), injected
+# at container-start via `env_file:` below. The image itself (backend/Dockerfile)
+# contains no credentials and no environment-specific values.
+#
+# backend/.env is OPTIONAL (`required: false`): every var has a working default baked
+# into the Python code itself (app/config.py, app/orchestrator/config.py), so
+# `docker compose up` serves a healthy, fully-mocked backend on a clean clone even
+# before that file exists.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: dasfax-backend:local
+    ports:
+      # Host:container. To change the HOST port, edit the left-hand side here (see
+      # DEMO.md's "changing the port" section for this and the non-Docker equivalent).
+      - "8000:8000"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      # Compose-level only, not one of the app's own knobs -- unbuffered stdout so
+      # `docker compose logs` shows uvicorn's output as it happens, not in bursts.
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      # No `curl` in the slim base image (see Dockerfile) -- reuse the interpreter
+      # that's already there instead of installing one just for this.
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
