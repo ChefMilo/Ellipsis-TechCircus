@@ -13,7 +13,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.contract import ArticleInput, ClaimExtractionResult
+from app.models.contract import (
+    ArticleInput,
+    Assessment,
+    AssessmentStatus,
+    Claim,
+    ClaimExtractionResult,
+    ClaimType,
+)
 from app.pipeline.ws5 import run_ws5
 from app.services.envelope import (
     PENDING_VERDICT_LEVEL,
@@ -140,6 +147,8 @@ def test_article_verdict_is_computed_from_the_assessments(analyzed: dict):
     elif "supported" in statuses:
         assert verdict["level"] == "ok"
     else:
+        # Nothing supported and nothing disputed: the neutral level, not a warning.
+        assert verdict["level"] == "unrated"
         assert verdict["level"] != "ok", "never OK when nothing was supported"
 
 
@@ -231,6 +240,40 @@ def test_to_analysis_response_on_empty_result():
     assert envelope.verifiedClaims == []
     assert envelope.articleVerdict.level == "unrated"
     assert_passes_ws2_guard(envelope.model_dump(mode="json"))
+
+
+def test_all_unverified_envelope_is_unrated_and_passes_the_guard():
+    # The other neutral case: Tier 3 ran, but no claim could be verified either way.
+    # Same level as the no-claims envelope, and it must survive the same guard.
+    result = ClaimExtractionResult(
+        url="https://news.example.org/unverifiable",
+        claims=[
+            Claim(
+                id="c1",
+                text="An unverifiable assertion about the world.",
+                claim_type=ClaimType.FACTUAL,
+                checkworthiness=0.8,
+                rank=1,
+            )
+        ],
+    )
+    envelope = to_analysis_response(
+        result,
+        status="complete",
+        assessments={
+            "c1": Assessment(
+                claim_id="c1",
+                status=AssessmentStatus.NEEDS_REVIEW,
+                explanation="No sources were retrieved for this claim.",
+            )
+        },
+    )
+
+    assert envelope.articleVerdict.level == "unrated"
+    assert envelope.articleVerdict.level == PENDING_VERDICT_LEVEL
+    body = envelope.model_dump(mode="json")
+    assert body["articleVerdict"]["level"] in VERDICT_LEVELS
+    assert_passes_ws2_guard(body)
 
 
 def test_to_analysis_response_accepts_an_article_verdict_override():

@@ -30,7 +30,11 @@ from app.services.assessment import (
     assess_claim,
     assess_claims,
 )
-from app.services.envelope import PENDING_VERDICT_LEVEL, article_verdict_for
+from app.services.envelope import (
+    PENDING_VERDICT_LEVEL,
+    UNVERIFIED_SUMMARY,
+    article_verdict_for,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_article.txt"
 
@@ -211,15 +215,35 @@ def test_rollup_all_supported_is_ok():
     assert v.summary == "3 claims supported."
 
 
-def test_rollup_all_needs_review_is_not_ok():
+def test_rollup_all_needs_review_is_unrated():
+    # Nothing supported and nothing disputed: neutral, not a warning. CAUTION here would
+    # false-alarm on a page there is no evidence against.
     v = article_verdict_for([_assessment(AssessmentStatus.NEEDS_REVIEW) for _ in range(2)])
+    assert v.level == ArticleVerdictLevel.UNRATED
     assert v.level != ArticleVerdictLevel.OK
-    assert v.level == ArticleVerdictLevel.CAUTION
+    assert v.level != ArticleVerdictLevel.CAUTION
+    assert UNVERIFIED_SUMMARY in v.summary, "the summary must still say why"
 
 
-def test_rollup_all_opinion_is_not_ok():
+def test_rollup_all_opinion_is_unrated():
     v = article_verdict_for([_assessment(AssessmentStatus.OPINION)])
+    assert v.level == ArticleVerdictLevel.UNRATED
     assert v.level != ArticleVerdictLevel.OK
+
+
+def test_rollup_mixed_unverified_and_opinion_is_unrated():
+    v = article_verdict_for([
+        _assessment(AssessmentStatus.NEEDS_REVIEW),
+        _assessment(AssessmentStatus.OPINION),
+    ])
+    assert v.level == ArticleVerdictLevel.UNRATED
+
+
+def test_rollup_unrated_still_passes_the_ws2_guard():
+    # WS2's VERDICT_LEVELS now includes "unrated"; the serialized level must be that
+    # exact spelling or isAnalysisResponse() drops the whole envelope.
+    v = article_verdict_for([_assessment(AssessmentStatus.NEEDS_REVIEW)])
+    assert v.model_dump(mode="json")["level"] == "unrated"
 
 
 def test_rollup_supported_plus_needs_review_is_ok():
@@ -231,9 +255,9 @@ def test_rollup_supported_plus_needs_review_is_ok():
     assert v.level == ArticleVerdictLevel.OK
 
 
-def test_rollup_of_nothing_is_the_pending_verdict():
+def test_rollup_of_nothing_is_the_unrated_verdict():
     v = article_verdict_for([])
-    assert v.level == PENDING_VERDICT_LEVEL
+    assert v.level == PENDING_VERDICT_LEVEL == ArticleVerdictLevel.UNRATED
     assert v.level != ArticleVerdictLevel.OK
 
 
