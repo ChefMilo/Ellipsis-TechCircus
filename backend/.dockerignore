@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+# Test files and the offline demo script aren't needed at runtime -- kept out of the
+# image for size, not because they're unimportant (see docs/ws3/WS3-DEPLOY.md for how CI still
+# runs them, from the repo checkout, not the image).
+tests/
+run_demo.py
