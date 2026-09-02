@@ -19,7 +19,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.clients.anthropic_compat import build_anthropic_client, json_via_tool
+from app.clients.anthropic_compat import (
+    build_anthropic_client,
+    decode_json_string,
+    json_via_tool,
+)
 from app.clients.base import AssessedClaim, AssessorClient
 from app.config import Settings
 from app.models.contract import AssessmentStatus, Evidence
@@ -99,6 +103,32 @@ def _unparseable() -> AssessedClaim:
     )
 
 
+def _field(data: dict[str, Any], key: str) -> Any:
+    """One verdict field, however the model chose to wrap it.
+
+    anthropic_compat.normalize_tool_input already merges a whole verdict that arrived
+    encoded under one of its own keys; this is the local belt-and-braces for the same
+    quirk one level deeper, so a wrapper costs the verdict nothing rather than turning a
+    real answer into needs_review.
+    """
+    value = data.get(key)
+    if isinstance(value, str) and key != "explanation":
+        decoded = decode_json_string(value)
+        if isinstance(decoded, dict) and key in decoded:
+            return decoded[key]
+        if decoded is not None:
+            return decoded
+    if isinstance(value, dict) and key in value:
+        return value[key]
+    if value is not None:
+        return value
+    # A sibling field may be carrying the whole verdict as a nested dict.
+    for sibling in data.values():
+        if isinstance(sibling, dict) and key in sibling:
+            return sibling[key]
+    return None
+
+
 def _coerce_indices(value: Any) -> list[int]:
     """Keep the integer indices, drop everything else. Out-of-range values are the
     service's problem (it drops them, then §2.5 downgrades if nothing survives)."""
@@ -156,16 +186,16 @@ class AnthropicAssessorClient(AssessorClient):
             # verdict, not the whole article.
             return _unparseable()
 
-        status = str(data.get("status", "")).strip().lower()
+        status = str(_field(data, "status") or "").strip().lower()
         if status not in _ALLOWED_STATUSES:
             return _unparseable()
 
-        explanation = data.get("explanation")
+        explanation = _field(data, "explanation")
         explanation = explanation.strip() if isinstance(explanation, str) and explanation.strip() else None
 
         return AssessedClaim(
             status=status,
-            evidence_indices=_coerce_indices(data.get("evidence_indices")),
-            confidence=_coerce_confidence(data.get("confidence")),
+            evidence_indices=_coerce_indices(_field(data, "evidence_indices")),
+            confidence=_coerce_confidence(_field(data, "confidence")),
             explanation=explanation,
         )

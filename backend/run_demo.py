@@ -1,13 +1,18 @@
-"""Offline demo: run Tier 3 (WS5 extraction + retrieval, then WS6 assessment) and
-pretty-print the result. No API keys needed — mock LLM, mock search, mock assessor.
+"""Demo runner: run Tier 3 (WS5 extraction + retrieval, then WS6 assessment) and
+pretty-print the result.
 
-    python run_demo.py                                   # sample article, default mocks
+Every backend comes from the SAME env switches the server uses, so this runs fully offline
+on the mocks with no API key by default, and exercises whatever real provider is configured
+when one is:
+
+    python run_demo.py                                   # sample article, configured backends
     python run_demo.py --fixture tests/fixtures/demo_article.txt --demo-spread
 
-`--demo-spread` switches the mock search client to its presentation profiles so the run
-visibly produces all four assessable statuses (supported / contradicted /
-partially_supported / needs_review) instead of whatever the hash happens to give. It is
-the CLI equivalent of DASFAX_MOCK_DEMO=1.
+`--demo-spread` is the one exception: it FORCES the mock search client into its
+presentation profiles so the run visibly produces all four assessable statuses (supported /
+contradicted / partially_supported / needs_review) instead of whatever the hash happens to
+give. Drop it on a real run — real evidence should drive the statuses. It is the CLI
+equivalent of DASFAX_MOCK_DEMO=1.
 
 To show the same thing through the real endpoint, the flag must be in the environment
 BEFORE the server starts (Settings reads env at import time):
@@ -26,7 +31,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from app.clients.factory import make_assessor_client, make_llm_client
+from app.clients.factory import make_assessor_client, make_llm_client, make_search_client
 from app.clients.mock_search import MockSearchClient
 from app.models.contract import ArticleInput
 from app.pipeline.ws5 import run_ws5
@@ -50,6 +55,27 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def fixture_note(*, llm: str, search: str, assessor: str) -> str:
+    """The honest one-liner about which backends are fixtures.
+
+    The old unconditional "the assessor is a labelled RENDERING FIXTURE" line became a lie
+    the moment a real assessor could be configured, and a false disclaimer is worse than
+    none: it invites a reader to discount a real verdict. So name only the roles actually
+    served by a mock (their clients all self-identify with a "mock" name prefix), and say
+    plainly when nothing is mocked.
+    """
+    mocked = [
+        role
+        for role, backend in (("LLM", llm), ("search", search), ("assessor", assessor))
+        if backend.startswith("mock")
+    ]
+    if not mocked:
+        return "NOTE: all three backends are real providers — this is live output."
+    roles = ", ".join(mocked)
+    verb = "is a labelled RENDERING FIXTURE" if len(mocked) == 1 else "are labelled RENDERING FIXTURES"
+    return f"NOTE: the {roles} {verb}, not real analysis. Do not quote this as a result."
+
+
 def main() -> None:
     args = _parse_args()
     raw = args.fixture.read_text(encoding="utf-8")
@@ -61,7 +87,9 @@ def main() -> None:
         source_domain="news.example.org",
     )
 
-    search = MockSearchClient(demo_spread=args.demo_spread)
+    # --demo-spread forces the presentation fixture; otherwise honour the configured
+    # provider, so a real run actually exercises anthropic/tavily/openai search.
+    search = MockSearchClient(demo_spread=True) if args.demo_spread else make_search_client()
     result = run_ws5(article, llm=make_llm_client(), search=search)
     assessor = make_assessor_client()
     assessments = assess_claims(result.claims, client=assessor)
@@ -72,7 +100,11 @@ def main() -> None:
     print(f"DASFAX Tier 3 — demo run ({args.fixture.name})")
     print("=" * 78)
     print(f"backends: {result.model_meta['llm_backend']} | {search.name} | {assessor.name}")
-    print("NOTE: the assessor is a labelled RENDERING FIXTURE, not real assessment.")
+    print(
+        fixture_note(
+            llm=result.model_meta["llm_backend"], search=search.name, assessor=assessor.name
+        )
+    )
     print(f"stats: {result.stats.model_dump()}")
     print("-" * 78)
 

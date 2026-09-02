@@ -13,7 +13,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.clients.anthropic_compat import build_anthropic_client, json_via_tool
+from app.clients.anthropic_compat import (
+    build_anthropic_client,
+    decode_json_string,
+    json_via_tool,
+)
 from app.clients.base import ExtractedClaim, LLMClient
 from app.config import Settings
 
@@ -78,6 +82,21 @@ _EXTRACT_TOOL: dict[str, Any] = {
 _CLAIM_TYPES = {"factual", "opinion", "prediction"}
 
 
+def _claim_rows(data: dict[str, Any]) -> list[Any]:
+    """The claims array, however the model chose to wrap it.
+
+    anthropic_compat.normalize_tool_input already undoes the double-encoding this guards
+    against; this is the local belt-and-braces, because losing every claim to a wrapper is
+    a silent empty panel rather than a visible error.
+    """
+    rows = data.get("claims")
+    if isinstance(rows, str):
+        rows = decode_json_string(rows)
+    if isinstance(rows, dict):          # self-nested one more level
+        rows = rows.get("claims")
+    return rows if isinstance(rows, list) else []
+
+
 class AnthropicLLMClient(LLMClient):
     name = "anthropic"
 
@@ -99,9 +118,7 @@ class AnthropicLLMClient(LLMClient):
             user=_USER_TEMPLATE.format(title=title or "(none)", text=text[:12000]),
             tool=_EXTRACT_TOOL,
         )
-        rows = data.get("claims")
-        if not isinstance(rows, list):
-            return []           # no usable answer -> no claims, no crash
+        rows = _claim_rows(data)   # [] for no usable answer -> no claims, no crash
 
         out: list[ExtractedClaim] = []
         for c in rows:

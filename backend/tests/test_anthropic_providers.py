@@ -19,6 +19,7 @@ import pytest
 
 from app.clients import anthropic_llm, openai_llm
 from app.clients.anthropic_assessor import AnthropicAssessorClient
+from app.clients.anthropic_compat import normalize_tool_input
 from app.clients.anthropic_llm import AnthropicLLMClient
 from app.clients.anthropic_search import AnthropicSearchClient, hits_from_message
 from app.clients.base import AssessedClaim, AssessorClient, ExtractedClaim, LLMClient, SearchClient
@@ -632,3 +633,130 @@ def test_a_message_in_dict_form_works_too():
     }
     hits = hits_from_message(payload, max_results=5)
     assert [(h.url, h.snippet) for h in hits] == [(POLICE, "A cited passage.")]
+
+
+# --------------------------------------------------------------------------- #
+# Regression: double-encoded tool output (observed live, claude-sonnet-5)
+#
+# The model sometimes fills a forced tool_use input with the WHOLE tool input again,
+# JSON-encoded as a string under one of its own schema keys. Before the fix this cost the
+# extractor every claim (an empty panel) and would cost the assessor its verdict
+# (needs_review for a claim it actually judged) — both silently, because every layer here
+# is built to degrade rather than raise.
+# --------------------------------------------------------------------------- #
+
+# Captured verbatim from a real run: input["claims"] is a STRING containing {"claims":[...]}.
+CAPTURED_DOUBLE_ENCODED_CLAIMS = {
+    "claims": (
+        '{"claims":[{"text":"Singapore recorded 3,363 impersonation scam cases in 2025.",'
+        '"claim_type":"factual","checkworthiness":0.9},'
+        '{"text":"Victims lost S$1.1 billion to scams in 2024.",'
+        '"claim_type":"factual","checkworthiness":0.85}]}'
+    )
+}
+
+
+def test_regression_double_encoded_extraction_still_yields_claims():
+    claims = _llm(_Message([_ToolUse("record_claims", CAPTURED_DOUBLE_ENCODED_CLAIMS)])).extract_claims(
+        title="Scams", text="body text"
+    )
+
+    assert claims != [], "the captured payload must not silently produce zero claims"
+    assert [c.text for c in claims] == [
+        "Singapore recorded 3,363 impersonation scam cases in 2025.",
+        "Victims lost S$1.1 billion to scams in 2024.",
+    ]
+    assert [c.claim_type for c in claims] == ["factual", "factual"]
+    assert [c.checkworthiness for c in claims] == [0.9, 0.85]
+
+
+def test_regression_double_encoded_verdict_is_still_a_real_verdict():
+    # The same quirk applied to record_verdict: the whole verdict encoded as a string
+    # under "status". Collapsing to parsed["status"] alone would keep the status but lose
+    # the indices, which §2.5 would then downgrade to needs_review — a real verdict thrown
+    # away. All four fields must survive.
+    payload = {
+        "status": (
+            '{"status":"supported","evidence_indices":[0,1],"confidence":0.82,'
+            '"explanation":"Both cited sources report the same figure."}'
+        )
+    }
+    result = _assessor(_Message([_ToolUse("record_verdict", payload)])).assess(
+        "A claim.", [_evidence("s", 0), _evidence("s", 1)]
+    )
+
+    assert result.status == AssessmentStatus.SUPPORTED
+    assert result.status != AssessmentStatus.NEEDS_REVIEW, "must not degrade to a parse failure"
+    assert result.evidence_indices == [0, 1]
+    assert result.confidence == 0.82
+    assert result.explanation == "Both cited sources report the same figure."
+
+
+def test_regression_double_encoded_verdict_survives_the_service():
+    # End to end: the verdict keeps its citations instead of being §2.5-downgraded.
+    payload = {
+        "status": (
+            '{"status":"supported","evidence_indices":[0],"confidence":0.8,'
+            '"explanation":"The cited police statement gives the same figure."}'
+        )
+    }
+    a = assess_claim(
+        _factual_claim([_evidence("Police reported 3,363 cases.")]),
+        client=_assessor(_Message([_ToolUse("record_verdict", payload)])),
+    )
+    assert a.status == AssessmentStatus.SUPPORTED
+    assert [c.snippet for c in a.citations] == ["Police reported 3,363 cases."]
+
+
+# --------------------------------------------------------------------------- #
+# normalize_tool_input, on its own
+# --------------------------------------------------------------------------- #
+def test_normalize_collapses_self_nesting():
+    assert normalize_tool_input({"claims": '{"claims": [1, 2]}'}) == {"claims": [1, 2]}
+
+
+def test_normalize_merges_rather_than_dropping_sibling_fields():
+    # The load-bearing difference for the assessor: everything the wrapper carried survives.
+    payload = {"status": '{"status": "supported", "evidence_indices": [0], "confidence": 0.5}'}
+    assert normalize_tool_input(payload) == {
+        "status": "supported",
+        "evidence_indices": [0],
+        "confidence": 0.5,
+    }
+
+
+def test_normalize_decodes_a_plain_encoded_value():
+    assert normalize_tool_input({"evidence_indices": "[0, 2]"}) == {"evidence_indices": [0, 2]}
+
+
+def test_normalize_flattens_a_nested_dict_too():
+    # Same quirk without the encoding: the value is already a dict repeating the key.
+    assert normalize_tool_input({"claims": {"claims": [1]}}) == {"claims": [1]}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"explanation": "Both sources agree."},          # an ordinary sentence
+        {"explanation": "true"},                          # decodes to a bool -> leave alone
+        {"explanation": "42"},                            # decodes to a number -> leave alone
+        {"explanation": '"quoted"'},                      # decodes to a string -> leave alone
+        {"status": "supported"},
+        {"claims": "{not valid json"},
+        {"claims": []},
+        {"confidence": 0.5},
+    ],
+)
+def test_normalize_leaves_ordinary_values_untouched(payload):
+    assert normalize_tool_input(payload) == payload
+
+
+def test_normalize_tolerates_a_non_dict():
+    assert normalize_tool_input(None) == {}
+    assert normalize_tool_input("nope") == {}
+
+
+def test_normalize_also_applies_to_the_text_fallback():
+    # The quirk is about how the model encodes its answer, not which block carried it.
+    message = _Message([_Text('{"claims": "{\\"claims\\": [{\\"text\\": \\"A.\\"}]}"}')])
+    assert [c.text for c in _llm(message).extract_claims(title=None, text="b")] == ["A."]

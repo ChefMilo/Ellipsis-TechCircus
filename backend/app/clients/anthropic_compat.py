@@ -75,6 +75,65 @@ def loads_object(raw: str | None) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def decode_json_string(value: Any) -> Any:
+    """Parse `value` if it is a string holding a JSON object or array; else return None.
+
+    Deliberately conservative: a string that decodes to a number, a bool or another string
+    is NOT a smuggled structure, it is just a string, and callers must get it back
+    untouched (an explanation reading "true" must stay the word "true").
+    """
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text or text[0] not in "{[":
+        return None
+    try:
+        parsed = json.loads(text)
+    except (ValueError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict | list) else None
+
+
+def normalize_tool_input(payload: dict[str, Any]) -> dict[str, Any]:
+    """Undo the double-encoding claude-sonnet-5 sometimes applies to forced tool input.
+
+    Observed live against `record_claims`, whose schema declares `claims` as an array:
+
+        {"claims": "{\"claims\":[{\"text\": ...}]}"}
+
+    — the value is a JSON *string* that contains the whole tool input again, self-nested
+    under its own key. The extraction prompt asks for no such thing (it never mentions
+    JSON), so this is a model quirk, not a prompt bug, and the fix belongs here rather
+    than in either caller: both the extractor and the assessor come through this function.
+
+    Two normalisations, both conservative:
+      * a value that is a JSON-encoded object/array is replaced by the decoded object;
+      * if that decoded object is a dict repeating the wrapper key, it IS the whole tool
+        input, so its keys are MERGED in rather than reduced to the one value. Merging is
+        what makes this safe for the assessor: `record_verdict` carries four fields, and
+        collapsing {"status": "{...whole verdict...}"} down to `parsed["status"]` alone
+        would silently discard evidence_indices, confidence and explanation.
+
+    Anything else is passed through untouched.
+    """
+    if not isinstance(payload, dict):
+        return {}
+
+    out: dict[str, Any] = dict(payload)
+    for key, value in payload.items():
+        parsed = decode_json_string(value)
+        if parsed is None:
+            # A dict value repeating its own key is the same quirk without the encoding.
+            if isinstance(value, dict) and key in value:
+                out.update(value)
+            continue
+        if isinstance(parsed, dict) and key in parsed:
+            out.update(parsed)
+        else:
+            out[key] = parsed
+    return out
+
+
 def json_via_tool(
     client: Any,
     *,
@@ -107,6 +166,8 @@ def json_via_tool(
             continue
         payload = attr(block, "input")
         if isinstance(payload, dict):
-            return payload
+            return normalize_tool_input(payload)
 
-    return loads_object(text_of(message))
+    # Same normalisation on the text fallback: the quirk is about how the model encodes
+    # its answer, not about which block carried it.
+    return normalize_tool_input(loads_object(text_of(message)))
