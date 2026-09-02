@@ -36,7 +36,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.config import get_settings
+from app.config import effective_text_mode, get_settings
 from app.services.calibration import auroc, ece, format_histogram, is_bimodal, wilson_interval
 from app.services.image_detector import heuristic_image_score
 from app.services.text_classifier import heuristic_score
@@ -348,8 +348,11 @@ def evaluate_realnews(per_category: int = 120) -> int:
     from datasets import load_dataset
 
     settings = get_settings()
+    # Resolve from the TEXT component's own mode. Keying this on the global screening_mode
+    # benchmarked the wrong backend once the halves became independently configurable.
+    mode = effective_text_mode(settings)
     score_text, backend_name, _ = build_text_scorer(
-        "huggingface" if settings.screening_mode != "heuristic" else "heuristic"
+        "heuristic" if mode == "heuristic" else "huggingface"
     )
 
     data = load_dataset("fancyzhx/ag_news", split="test")
@@ -360,8 +363,9 @@ def evaluate_realnews(per_category: int = 120) -> int:
     print("=" * 80)
     print("WS4 — false-positive rate on REAL news, by content type")
     print("=" * 80)
+    threshold = settings.heuristic_text_threshold if mode == "heuristic" else settings.text_threshold
     print(f"  backend        {backend_name}")
-    print(f"  threshold      {settings.text_threshold:.2f}")
+    print(f"  threshold      {threshold:.3f}  (text_mode={mode})")
     print(f"  corpus         AG News test split, {per_category} per category\n")
     print("  category      n   flagged as fake   95% interval")
     print("  " + "-" * 54)
@@ -371,7 +375,7 @@ def evaluate_realnews(per_category: int = 120) -> int:
         pool = [i for i, lab in enumerate(labels) if lab == index]
         picks = rng.sample(pool, min(per_category, len(pool)))
         scores = [score_text(None, data[i]["text"]) for i in picks]
-        flagged = sum(1 for s in scores if s >= settings.text_threshold)
+        flagged = sum(1 for s in scores if s >= threshold)
         low, high = wilson_interval(flagged, len(picks))
         total_flagged += flagged
         total += len(picks)
