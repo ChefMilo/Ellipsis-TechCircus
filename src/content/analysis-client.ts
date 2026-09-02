@@ -18,7 +18,10 @@ export interface AnalysisRequest {
   /** Cleaned article text from WS1 extraction, when available. Maps
    * straight onto backend ArticleInput.text -- must be sent byte-identical,
    * no further reflow/whitespace collapsing after WS1 produces it, since
-   * WS5's claim char_start/char_end offsets index into exactly this string. */
+   * WS5's claim char_start/char_end offsets index into exactly this string.
+   * Optional here on purpose: when extraction fails, POST /analyze accepts
+   * the missing body and returns 200 with errors: [{ code: "no_content" }]
+   * rather than a validation error -- confirmed with WS3 2026-09-01. */
   text?: string;
   images?: string[];
   /** ISO 8601, maps onto ArticleInput.published_at. */

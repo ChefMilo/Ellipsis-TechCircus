@@ -1,4 +1,4 @@
-# WS5 core (mock path - no API keys needed)
+# WS5/WS6 core (mock path - no API keys needed)
 fastapi>=0.110,<1.0
 uvicorn[standard]>=0.27,<1.0
 pydantic>=2.6,<3.0
@@ -6,8 +6,20 @@ pydantic>=2.6,<3.0
 # Tests
 pytest>=8.0,<9.0
 httpx>=0.27,<1.0            # required by fastapi.testclient
-
-# Optional real providers (only needed when you switch off mock):
-#   pip install openai       # DASFAX_LLM_PROVIDER=openai
-#   pip install tavily-python # DASFAX_SEARCH_PROVIDER=tavily
 ruff>=0.6,<1.0
+
+# --- OPTIONAL: real providers -------------------------------------------------
+# Not needed for the default (mock) path or for the test suite - every real client
+# imports its SDK lazily. Install only when switching a provider on:
+#
+#   pip install openai         # DASFAX_LLM_PROVIDER=openai / DASFAX_ASSESSOR_PROVIDER=openai
+#                              # (also drives Gemini/Groq via DASFAX_OPENAI_BASE_URL)
+#   pip install tavily-python  # DASFAX_SEARCH_PROVIDER=tavily
+#   pip install anthropic      # DASFAX_LLM_PROVIDER / _ASSESSOR_PROVIDER / _SEARCH_PROVIDER
+#                              # = anthropic. One package and ONE key covers read + verify
+#                              # + search, because Claude's web_search is a built-in
+#                              # server tool - no OpenAI and no Tavily account needed.
+#
+# openai>=1.30,<2.0
+# tavily-python>=0.5,<1.0
+# anthropic>=0.40

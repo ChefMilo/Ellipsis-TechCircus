@@ -48,23 +48,52 @@ def _get_float(name: str, default: float) -> float:
         return default
 
 
-def _get_bool(name: str, default: bool) -> bool:
+def _get_bool(name: str, default: bool = False) -> bool:
     raw = os.environ.get(name)
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# The OpenAI-compatible endpoint used when DASFAX_OPENAI_BASE_URL is unset. Any provider
+# that speaks the same /chat/completions shape (Gemini, Groq, ...) is a base-URL swap.
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
+
+# Default model for the NATIVE anthropic providers (read + verify + search). Set
+# DASFAX_ANTHROPIC_MODEL to a model your key actually has access to.
+DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+
+# Anthropic's web_search is a dated SERVER TOOL and keys differ on which versions they
+# accept. The SDK also ships web_search_20260209 / web_search_20260318; this is the
+# long-standing one, overridable with DASFAX_ANTHROPIC_WEB_SEARCH_TOOL.
+DEFAULT_ANTHROPIC_WEB_SEARCH_TOOL = "web_search_20250305"
+
+
 @dataclass(frozen=True)
 class Settings:
     # Which backends to use. "mock" (default) needs no keys.
-    llm_provider: str = "mock"        # mock | openai
-    search_provider: str = "mock"     # mock | tavily
+    llm_provider: str = "mock"        # mock | openai | anthropic
+    search_provider: str = "mock"     # mock | tavily | anthropic
+    assessor_provider: str = "mock"   # mock | openai | anthropic
+
+    # Demo/presentation only. OFF by default; changes nothing about the normal mock run.
+    # See app/clients/mock_search.py for exactly what it does and why.
+    mock_demo: bool = False
 
     # Credentials (only read by the real providers).
+    # "openai" here means the OpenAI WIRE FORMAT, not the vendor: point base_url at
+    # Gemini/Groq/vLLM and the same client works with only these two vars changed.
     openai_api_key: str | None = None
+    openai_base_url: str = DEFAULT_OPENAI_BASE_URL
     openai_model: str = "gpt-4o-mini"
     tavily_api_key: str | None = None
+
+    # NATIVE Anthropic (Messages API), used by all three "anthropic" providers. One key
+    # covers read + verify + search, because Claude's web_search is a built-in server tool
+    # — no OpenAI key and no Tavily key are read on that path.
+    anthropic_api_key: str | None = None
+    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL
+    anthropic_web_search_tool: str = DEFAULT_ANTHROPIC_WEB_SEARCH_TOOL
 
     # WS5 tuning knobs. These are the numbers to defend in the pitch.
     max_claims: int = 5                       # top-N load-bearing claims (proposal: 3–5)
@@ -218,9 +247,17 @@ def get_settings() -> Settings:
     return Settings(
         llm_provider=_get_str("DASFAX_LLM_PROVIDER", "mock"),
         search_provider=_get_str("DASFAX_SEARCH_PROVIDER", "mock"),
+        assessor_provider=_get_str("DASFAX_ASSESSOR_PROVIDER", "mock"),
+        mock_demo=_get_bool("DASFAX_MOCK_DEMO", False),
         openai_api_key=_get_opt_str("OPENAI_API_KEY"),
+        openai_base_url=_get_str("DASFAX_OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL),
         openai_model=_get_str("DASFAX_OPENAI_MODEL", "gpt-4o-mini"),
         tavily_api_key=_get_opt_str("TAVILY_API_KEY"),
+        anthropic_api_key=_get_opt_str("ANTHROPIC_API_KEY"),
+        anthropic_model=_get_str("DASFAX_ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL),
+        anthropic_web_search_tool=_get_str(
+            "DASFAX_ANTHROPIC_WEB_SEARCH_TOOL", DEFAULT_ANTHROPIC_WEB_SEARCH_TOOL
+        ),
         max_claims=_get_int("DASFAX_MAX_CLAIMS", 5),
         min_checkworthiness=_get_float("DASFAX_MIN_CHECKWORTHINESS", 0.35),
         evidence_per_claim=_get_int("DASFAX_EVIDENCE_PER_CLAIM", 3),

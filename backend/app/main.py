@@ -1,12 +1,17 @@
 """FastAPI surface for the Dasfax backend.
 
-Two tiers are exposed independently so each workstream is demoable on its own:
+Three endpoints, deliberately layered so each workstream stays demoable on its own:
 
-    POST /tier2/screen  (alias /screen)  — WS4, Tier 2 ML screening -> escalate or stop
-    POST /tier3/claims                   — WS5, claim extraction + evidence retrieval
+  POST /tier2/screen  (alias /screen)  — WS4, Tier 2 ML screening -> escalate or stop.
+  POST /tier3/claims                   — WS5's own output (claims, evidence, stats).
+  POST /analyze                        — the CLIENT-facing envelope WS2 renders. Owned
+                                         by WS3's orchestrator (app/orchestrator/
+                                         pipeline.py) and registered via the router in
+                                         app/api/analyze.py, NOT defined in this file.
 
-The top-level /analyze orchestration (Tier 0-3 routing) belongs to WS3; it can call these
-endpoints or import `run_ws4` / `run_ws5` directly.
+Tier 2 is exposed directly as well as through /analyze because it is a decision, not a
+verdict: `escalate_to_tier3` is what WS3 routes on, and being able to call it alone is
+what makes the cascade's cost argument measurable.
 """
 from __future__ import annotations
 
@@ -14,12 +19,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.analyze import router as analyze_router
 from app.config import effective_image_mode, effective_text_mode, get_settings
-from app.models.analysis import AnalysisResponse
 from app.models.contract import ArticleInput, ClaimExtractionResult
 from app.models.screening import ScreeningInput, ScreeningResult
-from app.pipeline.analyze import run_analysis
 from app.pipeline.ws4 import run_ws4
 from app.pipeline.ws5 import run_ws5
 
@@ -111,6 +116,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# The extension's service worker fetches this from a chrome-extension:// origin, which is
+# cross-origin, so without CORS the browser drops the response before Terry's code sees it.
+# DEV ONLY: tighten `allow_origins` to the published extension origin
+# ("chrome-extension://<id>") before this is exposed anywhere real.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health")
 def health() -> dict:
@@ -130,23 +146,6 @@ def health() -> dict:
         # only discoverable by reading `reasons` on an individual response.
         "screening_backends": list(_WARMUP_STATUS),
     }
-
-
-# NOT response_model_exclude_none: `VerifiedClaim.assessment` must serialise as an
-# explicit `null`, because WS2's `isVerifiedClaim` guard tests `assessment === null`.
-# Dropping it would make the guard reject every claim we return. The TS optionals are
-# widened to `| null` instead — see src/shared/contract.ts.
-@app.post("/analyze", response_model=AnalysisResponse)
-def analyze(page: ScreeningInput) -> AnalysisResponse:
-    """The single call the extension makes. Tier 2 screens; escalated pages go to Tier 3.
-
-    Returns the `AnalysisResponse` envelope defined in src/shared/contract.ts — the content
-    script validates every reply against it, so drift surfaces immediately as a malformed
-    response rather than a silent mis-render.
-
-    WS3 owns this seam; see app/pipeline/analyze.py for what it deliberately does not do.
-    """
-    return run_analysis(page)
 
 
 @app.post("/tier2/screen", response_model=ScreeningResult)
@@ -178,3 +177,6 @@ def extract_claims(article: ArticleInput) -> ClaimExtractionResult:
     Output: ClaimExtractionResult — the exact shape WS6 consumes.
     """
     return run_ws5(article)
+
+
+app.include_router(analyze_router)

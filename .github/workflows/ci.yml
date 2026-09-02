@@ -1,0 +1,52 @@
+name: CI
+
+# Runs both existing test suites on every push and PR. Nothing else — no lint gate, no
+# build/deploy step, no Docker build. Backend (pytest) and extension (vitest) are
+# independent jobs so either can fail/report without blocking the other, and neither
+# needs the other's toolchain installed.
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-tests:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Only the base requirements.txt: fastapi/uvicorn/pydantic/pytest/httpx/ruff.
+      # openai/tavily-python stay commented out there on purpose (see
+      # backend/.env.example) — every real-provider client imports its SDK lazily, so
+      # the full 147-test suite (including test_real_providers.py, which stubs the
+      # transport rather than calling out) passes without either installed. Verified
+      # locally before writing this workflow — see docs/ws3/WS3-DEPLOY.md.
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: python -m pytest -q
+
+  extension-tests:
+    name: Extension (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run vitest
+        run: npx vitest run

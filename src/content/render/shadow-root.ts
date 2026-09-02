@@ -90,6 +90,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .dasfax-pill[data-level="caution"] .dasfax-pill__dot { background: var(--dasfax-partially_supported-accent); }
 .dasfax-pill[data-level="high_risk"] .dasfax-pill__dot { background: var(--dasfax-contradicted-accent); }
 .dasfax-pill[data-level="trusted"] .dasfax-pill__dot { background: var(--dasfax-supported-accent); }
+.dasfax-pill[data-level="unrated"] .dasfax-pill__dot { background: var(--dasfax-muted); }
 .dasfax-pill__text { font-weight: 600; white-space: nowrap; }
 .dasfax-pill__sub { color: var(--dasfax-muted); font-weight: 400; }
 .dasfax-pill__dismiss {
@@ -263,6 +264,62 @@ ${STATUS_KEYS.map((k) => `.dasfax-badge[data-status="${k}"] { background: var(--
   font-size: 13px;
 }
 .dasfax-back:hover { color: var(--dasfax-fg); }
+
+/* --- hovercard ------------------------------------------------------- */
+.dasfax-hovercard {
+  position: fixed;
+  left: 0;
+  top: 0;
+  max-width: 360px;
+  width: max-content;
+  background: var(--dasfax-bg);
+  color: var(--dasfax-fg);
+  border: 1px solid var(--dasfax-border);
+  border-radius: var(--dasfax-radius);
+  box-shadow: var(--dasfax-shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.dasfax-hovercard[data-open="true"] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .dasfax-hovercard { transition: none; }
+}
+.dasfax-hovercard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dasfax-hovercard__close {
+  border: 0;
+  background: transparent;
+  color: var(--dasfax-muted);
+  padding: 2px;
+  border-radius: 6px;
+  line-height: 0;
+}
+.dasfax-hovercard__close:hover { color: var(--dasfax-fg); }
+.dasfax-hovercard__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+.dasfax-hovercard__meta { color: var(--dasfax-muted); font-size: 12px; margin: 0; }
+.dasfax-hovercard__explanation { margin: 0; font-size: 13px; }
+.dasfax-hovercard__unanchored {
+  font-size: 12px;
+  color: var(--dasfax-muted);
+  border: 1px dashed var(--dasfax-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: 0;
+}
 
 .dasfax-error { color: var(--dasfax-contradicted-accent); font-weight: 600; }
 .dasfax-retry {

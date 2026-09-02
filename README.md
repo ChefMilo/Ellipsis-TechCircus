@@ -1,107 +1,114 @@
-# Ellipsis-TechCircus — Dasfax
+# Dasfax
 
-A Chrome extension that fact-checks news **in the page you are already reading**, using a
-four-tier cascade that spends effort only where it is warranted.
-
-| tier | where | what it does |
-|---|---|---|
-| 0 | extension | hostname whitelist — trusted sources stop here, no network call |
-| 1 | extension | article-shaped heuristic — feeds, apps and shops stop here |
-| 2 | backend | fast ML screening (BERT + image CNN) — decides what is worth escalating |
-| 3 | backend | claim extraction, evidence retrieval, assessment |
+A Chrome extension that fact-checks news articles as you read them — entirely
+client-side triage first, so it never wastes a backend call (or your attention)
+on a page that doesn't need one.
 
 ---
 
-## Run it end to end
+## What it does
 
-Two terminals.
+1. You browse normally.
+2. **Tier 0** checks the domain against a whitelist of trusted news sources
+   (Straits Times, CNA, BBC, Reuters, ...). Trusted source → a small "✓ Trusted
+   source" badge, nothing else happens. No backend call.
+3. **Tier 1** scores whether the page actually looks like an article (byline,
+   paragraph density, text-to-markup ratio, etc.) versus a product page, an
+   inbox, a video player. Not an article → a quiet "Check this page anyway"
+   button appears; nothing runs unless you click it.
+4. If it *is* an article: the page's title, cleaned body text, author, date,
+   and images are extracted locally (via Mozilla's Readability) and sent to
+   the backend.
+5. **Tier 2** screens the article in the backend in under a second — a fine-tuned
+   BERT text classifier and an AI-generated-image CNN, run in parallel — and
+   decides whether the page is worth the expense of Tier 3. Most pages stop here.
+   That is the point of the cascade: Tier 3 costs seconds and real API spend.
+6. **Tier 3** extracts the article's load-bearing factual claims, retrieves
+   evidence for each one, and returns a verdict per claim — which the
+   extension paints back onto the live article as highlights, with a
+   bottom-right summary pill and a hovercard/evidence panel per claim.
 
-**Backend**
+Nothing is ever sent anywhere until a real article has been positively
+identified — Tiers 0 and 1 run 100% locally in the content script before any
+network call is possible.
+
+## Quick start
 
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate    # Windows: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt                       # offline, no API keys, ~10s
-pip install -r requirements-ml.txt                    # the real Tier 2 models
-python train_ws4.py                                   # builds the text model, ~27 min
-uvicorn app.main:app --port 8000
+git clone <this repo>
+cd Ellipsis-TechCircus
+docker compose up --build      # backend, fully offline by default, no API keys needed
 ```
 
-**About `train_ws4.py`:** the Tier 2 text model is fine-tuned by us, and its 438MB of
-weights are not in the repo (past GitHub's 100MB limit). Training is deterministic from a
-fixed seed, so anyone gets the same model. Until you run it the backend still works — it
-degrades to the heuristic and says so in `/health` and in every response.
-
-`GET /health` shows which backends are live. Without `requirements-ml.txt` everything still
-runs — Tier 2 falls back to offline heuristics and says so in every response.
-
-**Extension**
+Then, separately:
 
 ```bash
-npm install
-npm run build          # bundles src/ -> extension/*.js
+npm ci
+npm run build                  # -> extension/service-worker.js + extension/content-script.js
 ```
 
-Then `chrome://extensions` → enable Developer mode → **Load unpacked** → select the
-`extension/` folder. Open any news article that is not on the Tier 0 whitelist.
+Load `extension/` as an unpacked extension in Chrome (`chrome://extensions` →
+Developer mode → Load unpacked), then visit any real news article.
 
-The extension talks to `http://127.0.0.1:8000` (set in `src/background/service-worker.ts`,
-and it must match `host_permissions` in `extension/manifest.json`).
+**Tier 2 models are optional.** The image CNN downloads on first use; the text model is
+our own fine-tune and its 438MB of weights are not in the repo (past GitHub's limit).
+Until you run `pip install -r backend/requirements-ml.txt && python backend/train_ws4.py`,
+Tier 2 degrades to an offline heuristic and says so in `/health` and in every response —
+nothing breaks. See **[backend/WS4.md](backend/WS4.md)** for what the models do and do not
+detect, measured.
 
-**Without the backend**, add `?dasfaxMock=1` to any URL to render the in-page UI against a
-bundled mock.
+**For the full walkthrough** — offline/no-network demo mode, swapping in real
+LLM/search providers, three concrete test URLs that exercise each tier, and
+every known limitation stated plainly — see **[DEMO.md](DEMO.md)**.
 
----
-
-## What happens on a page
+## Repo layout
 
 ```
-content script  -- chrome.runtime.sendMessage --> service worker
-                                                        |
-                                                   POST /analyze
-                                                        |
-                                              Tier 2 screen (WS4)
-                                              /                  \
-                                    not escalated              escalated
-                                    status: complete       Tier 3 claims (WS5)
-                                    level: "ok"            level: caution/high_risk
-                                    no claims              verifiedClaims[]
+src/                  Chrome extension (TypeScript)
+  lib/                Tier 0/1: whitelist, article heuristic, extraction
+  background/         Service worker: message hop to the backend
+  content/            Content script: bootstrap, panel/highlighting (WS2), anchoring
+  shared/             Contract types shared between extension and backend
+
+backend/              FastAPI backend (Python)
+  app/models/         contract.py — the single source of truth for the Tier 3 shape
+  app/orchestrator/   WS3: routes a request through Tier 2 -> Tier 3 -> response
+  app/pipeline/       ws4.py — Tier 2 screening; ws5.py — claims + evidence
+  app/services/       Ranking, anchoring, assessment, envelope; Tier 2 scorers + calibration
+  app/clients/        LLM / search / assessor backends, and the Tier 2 model loaders
+                      (mock + real, swappable)
+  train_ws4.py        Fine-tunes the Tier 2 text model (~27 min, fixed seed)
+  ws4_eval.py         Tier 2 confusion matrices, threshold sweeps, real-news FPR
+
+docs/ws3/             Deep-dive docs on the contract, the message hop, and deploy
+DEMO.md               Full run-through: setup, offline mode, test URLs, limitations
+backend/README.md     WS5 pipeline detail
+WS2.md                WS2 panel/rendering detail
 ```
 
-Most pages stop at Tier 2 — that is the point of the cascade. Every response carries a
-`tier2` block saying what was decided and why.
+## Tech stack
 
----
+- **Extension:** TypeScript, Vitest, esbuild, Chrome MV3, [`@mozilla/readability`](https://github.com/mozilla/readability)
+- **Backend:** Python, FastAPI, Pydantic v2, pytest
+- **LLM/search/assessment providers:** pluggable — mock (default, fully offline), OpenAI-compatible, Anthropic, Tavily
 
-## Contract
-
-`src/shared/contract.ts` is the client mirror of the backend Pydantic models. The content
-script validates every reply with `isAnalysisResponse()`, so a renamed field is a
-user-visible failure rather than a type error.
-
-[`src/shared/backend-contract.test.ts`](src/shared/backend-contract.test.ts) guards that
-seam by running the guard against **real captured `/analyze` responses** in
-`test/fixtures/`. Re-capture them if the envelope changes.
-
----
-
-## Tests
+## Testing
 
 ```bash
-npm test                      # 93 extension tests
-cd backend && pytest -q       # 107 backend tests, offline, no weights
-cd backend && pytest -m models   # 8 more, needs requirements-ml.txt
+npm test              # extension: 109 tests
+cd backend && pytest -q   # backend: 203 tests
 ```
 
----
+Both suites run in CI on every push and PR (`.github/workflows/ci.yml`) — backend
+and extension as independent jobs, so either can fail without hiding the other.
 
-## Workstreams
+## Team
 
-| | area | status |
-|---|---|---|
-| WS1 | extension shell, Tier 0/1 triage, extraction | built |
-| WS2 | in-page rendering, evidence panel, DOM anchoring | built |
-| WS3 | backend spine, `/analyze` orchestration | **placeholder** — [backend/app/pipeline/analyze.py](backend/app/pipeline/analyze.py) works end to end but has no cache, rate limiting or retries |
-| WS4 | Tier 2 screening models | built — see [backend/WS4.md](backend/WS4.md) |
-| WS5 | claim extraction + evidence retrieval | built — see [backend/README.md](backend/README.md) |
-| WS6 | assessment, CLIP context check, benchmark | **not started** — claims currently return `assessment: null` |
+Six workstreams, one extension:
+
+- **WS1** — Extension shell & page triage
+- **WS2** — In-page rendering & evidence panel
+- **WS3** — Backend orchestration & deploy
+- **WS4** — Tier 2 ML screening ([backend/WS4.md](backend/WS4.md))
+- **WS5** — Claim extraction & evidence retrieval
+- **WS6** — Claim assessment

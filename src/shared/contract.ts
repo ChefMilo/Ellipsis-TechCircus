@@ -124,7 +124,20 @@ export interface ScreeningResult {
 // --- WS2-owned client envelope (proposed to WS3) --------------------------- //
 
 export type AnalysisStatus = "complete" | "processing" | "failed" | "skipped";
-export type ArticleVerdictLevel = "trusted" | "ok" | "caution" | "high_risk";
+/**
+ * `ok` / `caution` / `high_risk` are Tier 3 rollups over the per-claim verdicts;
+ * `ok` in particular means "claims were checked and at least one holds up" and is
+ * never synthesised by an earlier tier. `unrated` is the neutral state for every
+ * path that ends before Tier 3 — no article text, zero checkable claims, or a
+ * Tier 2 screen that cleared the page — not a clean bill of health, not a warning;
+ * the reason rides in `ArticleVerdict.summary`. `trusted` is Tier 0.
+ */
+export type ArticleVerdictLevel =
+  | "trusted"
+  | "ok"
+  | "caution"
+  | "high_risk"
+  | "unrated";
 
 export interface ArticleVerdict {
   level: ArticleVerdictLevel;
@@ -187,6 +200,7 @@ const VERDICT_LEVELS = new Set<ArticleVerdictLevel>([
   "ok",
   "caution",
   "high_risk",
+  "unrated",
 ]);
 
 function isRecord(v: unknown): v is Record<string, unknown> {

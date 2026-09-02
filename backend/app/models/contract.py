@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -192,3 +193,106 @@ class VerifiedClaim(BaseModel):
 
     claim: Claim
     assessment: Assessment | None = None
+
+
+# --------------------------------------------------------------------------- #
+# Client envelope (backend -> WS2)
+#
+# MIRRORS src/shared/contract.ts, where WS2 authored these shapes first as its
+# own "client envelope". Now that the backend actually produces them, THIS file
+# is the source of truth for the envelope too — Darren / Terry, sync
+# src/shared/contract.ts from here and drop its "proposed to WS3" caveat.
+#
+# Field names are camelCase ON PURPOSE: they are the literal wire format WS2's
+# isAnalysisResponse() guard checks. Renaming them to snake_case breaks the
+# renderer silently (the guard returns false and the response is dropped).
+# --------------------------------------------------------------------------- #
+class AnalysisStatus(StrEnum):
+    """WS2's `AnalysisStatus` union, verbatim."""
+
+    COMPLETE = "complete"
+    PROCESSING = "processing"
+    FAILED = "failed"
+    SKIPPED = "skipped"      # Tier 0 trusted source -> WS2 renders the "trusted" pill
+
+
+class ArticleVerdictLevel(StrEnum):
+    """WS2's `ArticleVerdictLevel` union, verbatim.
+
+    OK/CAUTION/HIGH_RISK are Tier 3 rollups: `article_verdict_for()` derives them from
+    the per-claim verdicts and nothing else may produce OK — it means "claims were
+    checked and at least one holds up". UNRATED is the neutral state for every path that
+    ends before a Tier 3 rollup: no article text, zero checkable claims, or a Tier 2
+    screen that cleared the page without escalating. It is not a clean bill of health and
+    not a warning; the reason for it rides in `ArticleVerdict.summary`. TRUSTED is Tier 0
+    (whitelisted domain). See app/services/envelope.py.
+    """
+
+    TRUSTED = "trusted"
+    OK = "ok"
+    CAUTION = "caution"
+    HIGH_RISK = "high_risk"
+    UNRATED = "unrated"
+
+
+class ArticleVerdict(BaseModel):
+    """Article-level rollup shown on WS2's summary pill and at the top of the panel."""
+
+    level: ArticleVerdictLevel
+    summary: str
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+
+
+class AnalysisError(BaseModel):
+    """Non-fatal problem to surface alongside a still-valid envelope."""
+
+    code: str
+    message: str
+
+
+class AnalysisRequest(BaseModel):
+    """What the extension POSTs to /analyze.
+
+    `text` is OPTIONAL so WS3 can wire and test the fetch before WS1 forwards
+    extracted body text; the endpoint answers with a valid empty envelope until it
+    arrives, and lights up on its own once it does.
+    """
+
+    url: str = Field(..., description="Canonical URL of the page being analyzed.")
+    title: str | None = Field(None, description="Page/article title, if the content script has one.")
+    text: str | None = Field(None, description="Cleaned article body text (WS1 `bodyText`). Absent until WS1 forwards it.")
+    images: list[str] | None = Field(None, description="Article image URLs. Unused by WS5 today; carried for WS6.")
+    published_at: datetime | None = Field(
+        None,
+        description=(
+            "Publish timestamp, if the content script's extractor found one (WS1 "
+            "`publishDate`). Threaded through to ArticleInput.published_at by "
+            "app/orchestrator/pipeline.py. Previously silently dropped by Pydantic's "
+            "default extra=\"ignore\" behaviour, since this field didn't exist here at "
+            "all -- see docs/ws3/WS3-CONTRACT-AUDIT.md Task C / docs/ws3/WS3-MESSAGE-HOP.md Task 6."
+        ),
+    )
+    source_domain: str | None = Field(
+        None,
+        description=(
+            "Hostname the content script computed client-side (WS1 `sourceDomain`). "
+            "Accepted for provenance/debugging but NOT authoritative: "
+            "app/orchestrator/pipeline.py derives ArticleInput.source_domain from "
+            "`url` server-side instead (same as before this field existed), so this "
+            "value is currently informational only."
+        ),
+    )
+
+
+class AnalysisResponse(BaseModel):
+    """The client-facing envelope WS2 renders. Must satisfy isAnalysisResponse()."""
+
+    schemaVersion: Literal["1.0"] = "1.0"
+    url: str
+    status: AnalysisStatus
+    articleVerdict: ArticleVerdict
+    verifiedClaims: list[VerifiedClaim] = Field(default_factory=list)
+    # WS2 types this `errors?: AnalysisError[]`; `null` is not a member of that type,
+    # so default to an empty list. Do not switch this model to exclude_none — that
+    # would also drop `assessment: null`, which WS2's isVerifiedClaim() requires.
+    errors: list[AnalysisError] = Field(default_factory=list)

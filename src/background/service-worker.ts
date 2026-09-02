@@ -1,5 +1,9 @@
 import { classifyHostname } from "../lib/hostname-match";
 import { ANALYZE_MESSAGE, type AnalysisRequest } from "../content/analysis-client";
+import { isAnalysisResponse, type AnalysisResponse } from "../shared/contract";
+import { analyzeViaBackend } from "./backend-client";
+import { getBackendConfig } from "./config";
+import { buildFixtureResponse } from "./fixture";
 
 // Tier 0 triage: on every tab navigation, classify the hostname and log the
 // result. No UI, no backend calls — this just decides what's worth
@@ -13,66 +17,102 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   console.log(`[WS1 Tier0] ${result}: ${tab.url}`);
 });
 
-/**
- * Backend origin. Under MV3 the service worker is the only place a network call
- * may originate, so this is the single point where the extension talks to the
- * backend. Must stay in sync with `host_permissions` in extension/manifest.json —
- * a fetch to a host that isn't listed there fails as a CORS error with no
- * useful message.
- */
-const BACKEND_ORIGIN = "http://127.0.0.1:8000";
-const ANALYZE_URL = `${BACKEND_ORIGIN}/analyze`;
-
-/**
- * Give up before the user does. The backend's own Tier 2 budget is 750ms and a
- * Tier 3 escalation adds LLM and search calls on top, so this is deliberately
- * generous — but it must be finite, or a hung backend leaves the in-page panel
- * spinning forever with no way to retry.
- */
-const REQUEST_TIMEOUT_MS = 30_000;
-
-async function analyze(payload: AnalysisRequest): Promise<unknown> {
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetch(ANALYZE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: abort.signal,
-    });
-    if (!response.ok) {
-      // 422 means our payload didn't match the backend contract — worth saying
-      // so explicitly, because it's a wiring bug rather than a service outage.
-      const detail = response.status === 422 ? " (payload rejected by backend)" : "";
-      throw new Error(`backend returned ${response.status}${detail}`);
-    }
-    return await response.json();
-  } finally {
-    clearTimeout(timer);
-  }
+function malformedResponseEnvelope(url: string): AnalysisResponse {
+  return {
+    schemaVersion: "1.0",
+    url,
+    status: "failed",
+    articleVerdict: {
+      level: "unrated",
+      summary: "The fact-check backend returned a response this extension could not understand.",
+    },
+    verifiedClaims: [],
+    errors: [
+      { code: "malformed_response", message: "Response failed isAnalysisResponse()." },
+    ],
+  };
 }
 
+async function handleAnalyze(payload: AnalysisRequest): Promise<AnalysisResponse> {
+  // Read fresh every call -- see config.ts's doc comment. Nothing here is cached at
+  // module scope: the service worker can be killed and restarted between messages, so
+  // a module-level cache is not guaranteed to still be valid (or to exist) later.
+  const config = await getBackendConfig();
+
+  const envelope = config.useFixture
+    ? buildFixtureResponse(payload.url)
+    : await analyzeViaBackend(payload, config);
+
+  // Defense in depth: validate whatever produced `envelope` -- the fixture, a live
+  // backend response, or backend-client.ts's own failure fallback -- against the exact
+  // guard the content script runs (src/shared/contract.ts's isAnalysisResponse) before
+  // it ever leaves this worker. A malformed envelope reaching the content script is
+  // silently dropped there with no error surfaced anywhere (see
+  // docs/ws3/WS3-CONTRACT-AUDIT.md, Task A), so catching it HERE -- where we can at least log it
+  // -- is strictly better than trusting every producer to have gotten the shape right.
+  if (!isAnalysisResponse(envelope)) {
+    console.error(
+      "[WS3] backend/fixture produced a response that fails isAnalysisResponse():",
+      envelope,
+    );
+    return malformedResponseEnvelope(payload.url);
+  }
+  return envelope;
+}
+
+// CRITICAL: this listener must stay a plain (non-async) function. Chrome's
+// chrome.runtime.onMessage does NOT support a listener returning a Promise the way
+// Firefox's WebExtensions API does (which is why most onMessage examples online use
+// `async (message, sender, sendResponse) => {...}` and are simply wrong for Chrome) --
+// Chrome ignores that returned promise entirely, so sendResponse fires whenever the
+// async work happens to finish, generally after the message channel has already
+// closed, and the content script's sendMessage() call just hangs until it times out.
+// The correct MV3 pattern: stay synchronous, kick off the async work, return `true`
+// synchronously to tell Chrome "I will call sendResponse later, keep the channel
+// open", and call sendResponse from inside the promise chain below. Do not "clean
+// this up" into an async function.
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== ANALYZE_MESSAGE) {
-    return false; // not ours; let another listener handle it
+  if (
+    !message ||
+    typeof message !== "object" ||
+    (message as { type?: unknown }).type !== ANALYZE_MESSAGE
+  ) {
+    return false; // not ours -- let it fall through, nothing to respond with
   }
 
-  analyze(message.payload as AnalysisRequest)
-    .then(sendResponse)
-    .catch((error: unknown) => {
-      const reason = error instanceof Error ? error.message : String(error);
-      const offline = reason.includes("Failed to fetch") || reason.includes("aborted");
-      console.warn(`[WS3] analyze failed: ${reason}`);
-      // The content script turns an { error } reply into a visible failure state.
-      // Say which of the two failures it was: a backend that isn't running looks
-      // identical to one that's broken unless we distinguish them here.
-      sendResponse({
-        error: offline
-          ? `Fact-check backend not reachable at ${BACKEND_ORIGIN}`
-          : `Fact-check failed: ${reason}`,
-      });
+  const payload = (message as { payload?: unknown }).payload;
+  if (!payload || typeof (payload as { url?: unknown }).url !== "string") {
+    sendResponse(malformedResponseEnvelope(""));
+    return false; // responded synchronously; no async work, channel can close
+  }
+
+  // All per-request state lives here, in this closure (`payload`, and everything
+  // handleAnalyze/analyzeViaBackend derive from it) -- never in a module-level
+  // variable. The service worker can be torn down and restarted at any point,
+  // including mid-request; anything held in module scope between the request coming
+  // in and the response going out would simply be gone when the worker wakes back up
+  // to resolve the promise chain below, silently dropping the caller's request.
+  handleAnalyze(payload as AnalysisRequest)
+    .catch((err: unknown) => {
+      // handleAnalyze/analyzeViaBackend already turn every failure mode (network,
+      // timeout, malformed shape) into a resolved envelope -- this only fires for a
+      // genuine bug (e.g. isAnalysisResponse itself throwing), which must still never
+      // reach sendResponse as a raw, unparseable error.
+      console.error("[WS3] handleAnalyze threw unexpectedly:", err);
+      return malformedResponseEnvelope((payload as AnalysisRequest).url);
+    })
+    .then((envelope) => {
+      try {
+        sendResponse(envelope);
+      } catch {
+        // The content script's port can die before we respond -- the tab was closed,
+        // navigated away, or bootstrap.ts's SPA-navigation handler already tore down
+        // and re-mounted the fact-check UI (teardownFactCheck() / a fresh
+        // startFactCheck() call). sendResponse throwing here means nobody is
+        // listening any more; there is nothing to recover, so just don't crash the
+        // worker over it.
+      }
     });
 
-  return true; // keep the message channel open for the async sendResponse
+  return true; // async response coming -- keep the message channel open
 });

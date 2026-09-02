@@ -1,9 +1,11 @@
 # WS2 — In-page rendering & evidence panel
 
 Everything the user sees on the page: claim highlights painted onto the live
-article, and a Shadow-DOM evidence drawer with per-claim status, explanation and
-sources. No network calls originate here (MV3 rule) — WS2 renders whatever the
-background/WS3 hands back.
+article, a Shadow-DOM **hovercard** that pops up beside a claim on hover (click to
+pin it open) with that claim's status, explanation and sources, and a fuller
+evidence **drawer** — the all-claims overview — opened from the summary pill. No
+network calls originate here (MV3 rule) — WS2 renders whatever the background/WS3
+hands back.
 
 ## Run it on any news site (no backend needed)
 
@@ -19,7 +21,7 @@ can eyeball anchoring + the panel on Straits Times, CNA, etc. — the mock path
 bypasses Tier 0/1 triage, which otherwise short-circuits on whitelisted domains.
 
 ```bash
-npm test               # vitest, 44 WS2 tests
+npm test               # vitest
 npm run typecheck
 ```
 
@@ -39,11 +41,13 @@ cd backend && python run_demo.py     # copy the `claims` into mock-response.ts
 | Claim → flat span (exact, then fuzzy Dice) | `src/content/anchor/match-claim.ts` |
 | Flat span → live `Range`, block-boundary clamp | `src/content/anchor/to-range.ts` |
 | Status → colour/icon/label (one source) | `src/content/render/status-config.ts` |
-| Highlight painting (Highlight API + span fallback) | `src/content/render/highlights.ts` |
+| Shared badge + source-list builders (drawer & hovercard) | `src/content/render/claim-view.ts` |
+| Highlight painting (Highlight API + span fallback), hover/active emphasis | `src/content/render/highlights.ts` |
 | Shadow root + scoped CSS | `src/content/render/shadow-root.ts` |
 | Summary pill (loading / result / error / trusted / dismissed) | `src/content/render/pill.ts` |
-| Evidence drawer (list + detail, focus-trap, Esc) | `src/content/render/panel.ts` |
-| Orchestration, click hit-testing, re-anchor observer | `src/content/render/controller.ts` |
+| Hover preview — status + evidence popover anchored to a claim (primary surface) | `src/content/render/hovercard.ts` |
+| Evidence drawer (all-claims list + detail, focus-trap, Esc) — opened from the pill | `src/content/render/panel.ts` |
+| Orchestration, pointer/keyboard hit-testing, re-anchor observer | `src/content/render/controller.ts` |
 | Dev/prod data source | `src/content/analysis-client.ts` |
 
 `bootstrap.ts` (WS1) calls `mountFactCheckUI()` when a page is judged an article,

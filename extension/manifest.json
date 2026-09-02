@@ -1,10 +1,28 @@
 {
   "manifest_version": 3,
-  "name": "Dasfax Fact-Check (dev build)",
-  "version": "0.2.0",
-  "description": "In-page fact-checking: Tier 0/1 triage in the browser, Tier 2 ML screening and Tier 3 claim verification in the backend.",
-  "permissions": ["tabs"],
-  "host_permissions": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
+  "name": "Ellipsis Fact-Check Triage (WS1 dev build)",
+  "version": "0.1.0",
+  "description": "Tier 0/1 page triage for a fact-checking extension: decides whether a page is worth checking before any backend call fires.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Ellipsis Fact-Check Triage"
+  },
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
