@@ -30,19 +30,27 @@ def _get_bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# The OpenAI-compatible endpoint used when DASFAX_OPENAI_BASE_URL is unset. Any provider
+# that speaks the same /chat/completions shape (Gemini, Groq, ...) is a base-URL swap.
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
+
+
 @dataclass(frozen=True)
 class Settings:
     # Which backends to use. "mock" (default) needs no keys.
     llm_provider: str = os.environ.get("DASFAX_LLM_PROVIDER", "mock")        # mock | openai
     search_provider: str = os.environ.get("DASFAX_SEARCH_PROVIDER", "mock")  # mock | tavily
-    assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock (WS6; real provider TBD)
+    assessor_provider: str = os.environ.get("DASFAX_ASSESSOR_PROVIDER", "mock")  # mock | openai
 
     # Demo/presentation only. OFF by default; changes nothing about the normal mock run.
     # See app/clients/mock_search.py for exactly what it does and why.
     mock_demo: bool = _get_bool("DASFAX_MOCK_DEMO")
 
     # Credentials (only read by the real providers).
+    # "openai" here means the OpenAI WIRE FORMAT, not the vendor: point base_url at
+    # Gemini/Groq/vLLM and the same client works with only these two vars changed.
     openai_api_key: str | None = os.environ.get("OPENAI_API_KEY")
+    openai_base_url: str = os.environ.get("DASFAX_OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL)
     openai_model: str = os.environ.get("DASFAX_OPENAI_MODEL", "gpt-4o-mini")
     tavily_api_key: str | None = os.environ.get("TAVILY_API_KEY")
 
