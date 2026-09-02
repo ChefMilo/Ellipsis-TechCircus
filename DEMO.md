@@ -103,8 +103,10 @@ request. To go back to the default, either set it back explicitly or
 `chrome.storage.local.remove(["dasfaxBackendBaseUrl"])`.
 
 The same console also controls the request timeout (`dasfaxRequestTimeoutMs`, default
-`15000`) and whether the fixture path is used at all (`dasfaxUseFixture`, see §5,
-default `true`) — same mechanism, same place.
+`130000` — deliberately above the backend's own 120s `DASFAX_TIER3_TIMEOUT_S` so the
+backend times out first and returns a readable `tier3_timeout` in `errors[]`) and
+whether the offline fixture path is used at all (`dasfaxUseFixture`, see §5, default
+`false`) — same mechanism, same place.
 
 If you change the port, remember `extension/manifest.json`'s `host_permissions` only
 allow `http://127.0.0.1:8000/*` and `http://localhost:8000/*` today (§4) — a genuinely
@@ -162,20 +164,25 @@ both must pass:
 Two independent layers of offline-safety exist; use the first one if the venue
 network is untrusted or blocks outbound calls entirely.
 
-**Layer 1 — `USE_FIXTURE=true` (extension-side, default, needs no backend running at
-all).** `src/background/config.ts`'s `dasfaxUseFixture` defaults to `true`. With it
-on, the service worker never calls `fetch()` at all — `src/background/fixture.ts`
-returns a hardcoded, contract-valid `AnalysisResponse` (4 claims, `assessment: null`
-on all of them, `articleVerdict.level: "unrated"`) locally, including two claims with
-real anchor offsets that genuinely highlight on `test/fixtures/gnarly-article.html`
-(see `docs/ws3/WS3-MESSAGE-HOP.md` for the by-hand derivation and an executed test proving it).
-**This is already the default** — load the extension (§2) and open any qualifying
-article page; no backend, no Docker, no network beyond loading the page itself. To
-confirm it's active or to re-enable it after switching to a real backend:
+**Layer 1 — `dasfaxUseFixture` (extension-side, needs no backend running at all).**
+`src/background/config.ts`'s `dasfaxUseFixture` defaults to `false`, so a normal load
+calls the real backend. Turn it **on** for a venue with no network at all — one command
+in the service worker's console, no rebuild:
 
 ```js
 chrome.storage.local.set({ dasfaxUseFixture: true })
 ```
+
+With it on, the service worker never calls `fetch()` — `src/background/fixture.ts`
+returns a hardcoded, contract-valid `AnalysisResponse` (4 claims, `assessment: null`
+on all of them, `articleVerdict.level: "unrated"`) locally, including two claims with
+real anchor offsets that genuinely highlight on `test/fixtures/gnarly-article.html`
+(see `docs/ws3/WS3-MESSAGE-HOP.md` for the by-hand derivation and an executed test proving it).
+
+**It is no longer the default, on purpose.** The fixture is contract-valid and renders
+convincingly, so a run that silently served it is indistinguishable on screen from a
+successful end-to-end run against the real pipeline — a bad thing to discover mid-demo.
+Opt into it deliberately; switch back with `chrome.storage.local.set({ dasfaxUseFixture: false })`.
 
 **Layer 2 — the backend's own mock providers (default, if you do run a real
 backend).** Independent of the extension's fixture: `DASFAX_LLM_PROVIDER`,
@@ -192,14 +199,15 @@ at the venue.
 
 ## 6. Three test URLs — three different paths through Tier 0/1
 
-Load the extension (§2), leave `dasfaxUseFixture` at its default `true` for a
-guaranteed result (§5), and visit each of these:
+Load the extension (§2) with the backend running (§1). For a result that is guaranteed
+regardless of the network or provider keys, set `dasfaxUseFixture` to `true` first (§5).
+Then visit each of these:
 
 | URL | Path exercised | What you should see |
 |---|---|---|
 | `https://www.bbc.com/` (any page) | **Tier 0: whitelisted domain** (`src/lib/whitelist.ts` lists `bbc.com`) | A small "✓ Trusted source" chip, top-right. No fact-check pill, no backend/fixture call at all — Tier 0 short-circuits before Tier 1 ever runs. |
 | `https://www.youtube.com/` | **Tier 1: not an article** (video-dominant layout, few paragraphs — `isProbablyArticle()` in `src/lib/article-heuristic.ts` scores this low) | A "Check this page anyway" chip, top-right. No automatic fact-check — clicking it is the only thing that starts one. |
-| `https://en.wikipedia.org/wiki/Singapore` (or any long-form Wikipedia article) | **Tier 1 passes, not whitelisted** — the real analyze path | The bottom-right summary pill: loading spinner, then the fixture's 4 claims (§5) with two genuinely highlighted in the article body. |
+| `https://en.wikipedia.org/wiki/Singapore` (or any long-form Wikipedia article) | **Tier 1 passes, not whitelisted** — the real analyze path | The bottom-right summary pill: loading spinner, then the backend's claims highlighted in the article body (or, with `dasfaxUseFixture: true`, the fixture's 4 claims with two highlighted). |
 
 (Any non-whitelisted, paragraph-heavy article page works for the third row — Wikipedia
 is just a stable, content-rich, non-whitelisted example that doesn't depend on a news

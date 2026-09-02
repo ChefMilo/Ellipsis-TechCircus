@@ -8,7 +8,7 @@
  *
  *   chrome.storage.local.set({ dasfaxBackendBaseUrl: "http://localhost:9000" })
  *   chrome.storage.local.set({ dasfaxRequestTimeoutMs: 30000 })
- *   chrome.storage.local.set({ dasfaxUseFixture: false })
+ *   chrome.storage.local.set({ dasfaxUseFixture: true })   // offline fixture path
  *
  * Overrides persist in storage.local (survives the service worker being killed and
  * restarted -- see the note on getBackendConfig() below) until removed with
@@ -16,9 +16,29 @@
  */
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8000";
-const DEFAULT_TIMEOUT_MS = 15000;
-/** Default true: a fresh unpacked-extension load must work with zero backend running. */
-const DEFAULT_USE_FIXTURE = true;
+/**
+ * Client-side fetch budget. Deliberately ABOVE the backend's own Tier 3 budget
+ * (backend/app/orchestrator/config.py's tier3_timeout_s, 120s) so the BACKEND gives up
+ * first and answers with errors[{ code: "tier3_timeout" }] -- a cause you can read --
+ * instead of this AbortController firing blind and reporting "backend_unreachable",
+ * which looks identical to the server being down. If you lower the backend budget,
+ * lower this too, keeping this one higher.
+ */
+const DEFAULT_TIMEOUT_MS = 130000;
+/**
+ * Default false: a normal load calls the real backend, which is what a live demo needs.
+ *
+ * The fixture path is NOT removed -- it is still the offline fallback for a venue with
+ * no network, and is one command away in the service worker's console (no rebuild):
+ *
+ *   chrome.storage.local.set({ dasfaxUseFixture: true })
+ *
+ * It defaulted to true while the backend hop was being built, when "works with zero
+ * backend running" was the point. That default now costs more than it saves: the
+ * fixture is contract-valid and renders convincingly, so a run that silently served it
+ * looks exactly like a successful end-to-end run against the real pipeline.
+ */
+const DEFAULT_USE_FIXTURE = false;
 
 const STORAGE_KEYS = {
   baseUrl: "dasfaxBackendBaseUrl",

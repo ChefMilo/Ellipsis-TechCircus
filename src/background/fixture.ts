@@ -1,5 +1,6 @@
 /**
- * Hardcoded AnalysisResponse used when config.useFixture is true (the default). Lets
+ * Hardcoded AnalysisResponse used when config.useFixture is true (opt-in; the default
+ * is false, so a normal load calls the real backend). Lets
  * the whole extension <-> backend message hop, and Darren's DOM anchoring, be exercised
  * end to end with zero backend running.
  *
