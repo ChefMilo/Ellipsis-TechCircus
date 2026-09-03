@@ -12,7 +12,7 @@ from app.models.contract import AnalysisRequest, AnalysisStatus, ArticleVerdictL
 from app.models.screening import ScreeningInput, ScreeningResult
 from app.orchestrator import tier2
 from app.orchestrator.cache import InMemoryTTLCache
-from app.orchestrator.config import OrchestratorSettings
+from app.orchestrator.config import OrchestratorSettings, get_orchestrator_settings
 from app.orchestrator.pipeline import run_analysis
 
 TEXT = "The agency said dengue cases fell to 214 in the week ending 30 August."
@@ -164,7 +164,15 @@ def test_analysis_falls_open_when_the_screen_overruns(monkeypatch):
     assert resp.status is AnalysisStatus.COMPLETE
     assert resp.verifiedClaims                                 # Tier 3 still ran
 
-def test_tier2_is_off_by_default(monkeypatch):
-    """Default OFF is load-bearing: with it on, most real news never reaches Tier 3."""
+def test_tier2_is_on_by_default(monkeypatch):
+    """The gate ships ON. Pinned as a test because the default decides whether Tier 3
+    runs for every page — flipping it silently changes what the product does, not just
+    what it costs."""
     monkeypatch.delenv("DASFAX_TIER2_ENABLED", raising=False)
-    assert OrchestratorSettings().tier2_enabled is False
+    assert get_orchestrator_settings().tier2_enabled is True
+
+
+def test_tier2_can_be_disabled_by_env(monkeypatch):
+    """The escape hatch has to work: DASFAX_TIER2_ENABLED=0 routes everything to Tier 3."""
+    monkeypatch.setenv("DASFAX_TIER2_ENABLED", "0")
+    assert get_orchestrator_settings().tier2_enabled is False
