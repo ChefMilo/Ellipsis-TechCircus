@@ -7,6 +7,10 @@ requires-python = ">=3.11"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# Tests needing downloaded HF weights are opt-in: `pytest -m models`. The default run
+# stays offline and fast, which is what CI and every teammate without torch relies on.
+markers = ["models: requires downloaded HuggingFace weights (deselected by default)"]
+addopts = "-m 'not models'"
 
 [tool.ruff]
 line-length = 110

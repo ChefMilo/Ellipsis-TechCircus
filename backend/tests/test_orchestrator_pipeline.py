@@ -195,8 +195,10 @@ def test_tier3_raising_returns_a_valid_failed_envelope_never_an_exception(monkey
     assert "boom" in response.errors[0].message
 
 
-def test_tier2_disabled_by_default_falls_straight_through_to_tier3():
-    settings = OrchestratorSettings()  # real defaults, no overrides
+def test_tier2_disabled_falls_straight_through_to_tier3():
+    """Tier 2 now ships ON, so this pins the OFF path explicitly rather than by default:
+    with the gate disabled every page must reach Tier 3 unconditionally."""
+    settings = OrchestratorSettings(tier2_enabled=False)
     assert settings.tier2_enabled is False
     request = AnalysisRequest(url="https://news.example.org/z", text=ARTICLE_TEXT)
     response = _run(run_analysis(request, settings=settings, cache=InMemoryTTLCache(ttl_s=300)))

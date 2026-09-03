@@ -1,3 +1,8 @@
+> **Also in this backend: WS4 (Tier 2 ML screening)** — `POST /tier2/screen`, the BERT +
+> image-detector cascade that decides what is worth escalating to Tier 3. See
+> [WS4.md](WS4.md). It shares `app/config.py` and reuses `PageEnvelope` from
+> [`app/models/contract.py`](app/models/contract.py); everything below is WS5.
+
 # Dasfax backend — WS5 (Claim Extraction & Evidence Retrieval)
 
 Tier 3, first half. Takes cleaned article text → returns a small set of **ranked,

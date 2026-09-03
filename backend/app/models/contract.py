@@ -53,16 +53,31 @@ class AssessmentStatus(StrEnum):
 # --------------------------------------------------------------------------- #
 # Inputs (what WS3/WS1 hand to WS5)
 # --------------------------------------------------------------------------- #
-class ArticleInput(BaseModel):
-    """Cleaned article text handed to WS5. Text is expected to be already
-    extracted/cleaned upstream (WS1 article extraction). WS5 does not fetch pages."""
+class PageEnvelope(BaseModel):
+    """Everything WS1 knows about a page EXCEPT its body text.
+
+    Split out so Tier 2 (WS4) and Tier 3 (WS5) share one definition of the page envelope:
+    they receive the same page, they just disagree about whether body text is mandatory.
+    Tier 3 cannot extract claims without text; Tier 2 can still screen the images.
+    Adding a field to the envelope stays a one-file change.
+    """
 
     url: str = Field(..., description="Canonical URL of the article (for logging/citation dedup).")
     title: str | None = Field(None, description="Article headline, if available.")
-    text: str = Field(..., min_length=1, description="Cleaned article body text.")
     lang: str | None = Field(None, description="BCP-47 language tag, e.g. 'en'. Advisory only.")
     source_domain: str | None = Field(None, description="Hostname, e.g. 'straitstimes.com'.")
     published_at: datetime | None = Field(None, description="Publish timestamp if known.")
+
+
+class ArticleInput(PageEnvelope):
+    """Cleaned article text handed to WS5. Text is expected to be already
+    extracted/cleaned upstream (WS1 article extraction). WS5 does not fetch pages.
+
+    Wire shape is unchanged by the PageEnvelope split — `text` is still required and still
+    rejected when blank.
+    """
+
+    text: str = Field(..., min_length=1, description="Cleaned article body text.")
 
     @field_validator("text")
     @classmethod

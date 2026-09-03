@@ -28,15 +28,25 @@ def _get_float(name: str, default: float) -> float:
 
 @dataclass(frozen=True)
 class OrchestratorSettings:
-    # Tier 2 (BERT text classifier + AI-generated-image detector) does not exist in
-    # this tree -- see docs/ws3/RECON.md §6 / §10.2. The branch that has it
-    # (ws4-tier2-screening) is 11 commits ahead of main, 13 behind, unmerged, and its
-    # own commit history says the fine-tuned text checkpoint flags 83% of real news as
-    # fake (docs/ws3/RECON.md §10.3). Defaulting this OFF is a safety decision, not a
-    # placeholder oversight: flipping it on today does not run real Tier 2 screening
-    # (see orchestrator/tier2.py's module docstring), it only activates a seam that
-    # still falls straight through to Tier 3.
-    tier2_enabled: bool = _get_bool("DASFAX_TIER2_ENABLED", False)
+    # Tier 2 screening gate (app/orchestrator/tier2.py -> app/pipeline/ws4.py): a
+    # fine-tuned text classifier plus an AI-generated-image CNN, in parallel, inside a
+    # ~750ms budget. When Tier 2 clears a page, Tier 3 NEVER RUNS for it and the reader
+    # gets UNRATED with the reason in the summary.
+    #
+    # ON by default. This was False while the screener was a no-op and while its numbers
+    # could not be trusted; both have changed. Measured on 1,200 articles (600 fake, 600
+    # BBC published 2024-25 — after the model was trained, so the real half is unseen):
+    # AUROC 0.992, and at the shipped 0.995 threshold precision 99.8% / recall 90.2% —
+    # ONE false positive in 600 real articles. Against Tier 3's ~120s and ~$0.35 per
+    # article, gating is what makes the cascade's economics real.
+    #
+    # THE HONEST RESIDUAL RISK, because turning this on is not free: recall is measured
+    # against ISOT, which WELFake absorbs and this model trained on, so 90.2% is partly
+    # memory. Recall on fake articles it has NEVER seen is unmeasured — no public corpus
+    # of post-2023 labelled fake articles exists (backend/WS4.md). A page Tier 2 clears
+    # is a page nobody checks, so the cost of that unknown falls on the reader, not the
+    # budget. Set DASFAX_TIER2_ENABLED=0 to route everything to Tier 3 unconditionally.
+    tier2_enabled: bool = True
 
     # Wall-clock budget for the Tier 3 step (run_ws5 + WS6 assessment) inside one
     # /analyze call. Near-instant on the mock backends; sized for the REAL provider
@@ -53,13 +63,34 @@ class OrchestratorSettings:
     # and answers with errors[{code: "tier3_timeout"}] -- a diagnosable cause -- rather
     # than the client aborting blind and reporting a generic "unreachable". Raise both,
     # in that order, if you raise either.
-    tier3_timeout_s: float = _get_float("DASFAX_TIER3_TIMEOUT_S", 120.0)
+    tier3_timeout_s: float = 120.0
+
+    # Outer wall-clock bound on the Tier 2 screen, in seconds. WS4 already enforces its
+    # own deadline internally (DASFAX_SCREEN_BUDGET_MS, 750ms by default); this is the
+    # orchestrator's independent guard for the case where that deadline does not hold --
+    # a wedged image fetch, a model load on a cold cache. Comfortably above WS4's budget
+    # so it never fires in normal operation, and low enough that a hung screen costs the
+    # request far less than Tier 3's own 120s. Exceeding it fails open to Tier 3.
+    tier2_timeout_s: float = 5.0
 
     # How long a successfully-assembled AnalysisResponse is served from the in-memory
     # cache before a repeat (url, text) request re-runs Tier 3. Failed results are
     # never cached (see pipeline.py) regardless of this TTL.
-    cache_ttl_s: float = _get_float("DASFAX_CACHE_TTL_S", 300.0)
+    cache_ttl_s: float = 300.0
 
 
 def get_orchestrator_settings() -> OrchestratorSettings:
-    return OrchestratorSettings()
+    """Build settings from the CURRENT environment.
+
+    Env is read here, not in the dataclass field defaults: defaults in a class body are
+    evaluated once at import, which would freeze DASFAX_TIER2_ENABLED at whatever it was
+    when this module first loaded. That makes the documented escape hatch unreliable and
+    untestable — the field defaults below are the documented fallbacks, and this overlays
+    the environment on top of them.
+    """
+    return OrchestratorSettings(
+        tier2_enabled=_get_bool("DASFAX_TIER2_ENABLED", True),
+        tier2_timeout_s=_get_float("DASFAX_TIER2_TIMEOUT_S", 5.0),
+        tier3_timeout_s=_get_float("DASFAX_TIER3_TIMEOUT_S", 120.0),
+        cache_ttl_s=_get_float("DASFAX_CACHE_TTL_S", 300.0),
+    )

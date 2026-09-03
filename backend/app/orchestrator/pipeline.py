@@ -179,10 +179,31 @@ async def run_analysis(
     if cached is not None:
         return cached
 
-    tier2_verdict = tier2.screen(text=text, tier2_enabled=settings.tier2_enabled)
+    # Off-thread, and time-boxed. tier2.screen() is synchronous and does network I/O
+    # (image fetches) inside WS4's own budget, so calling it inline would block the event
+    # loop for the length of that budget on every request. The wait_for is belt-and-braces
+    # over WS4's internal deadline: a screener that hung past its own budget would
+    # otherwise stall a request that Tier 3 could have answered.
+    try:
+        tier2_verdict = await asyncio.wait_for(
+            asyncio.to_thread(
+                tier2.screen,
+                url=request.url,
+                title=request.title,
+                text=text,
+                image_urls=request.images,
+                tier2_enabled=settings.tier2_enabled,
+            ),
+            timeout=settings.tier2_timeout_s,
+        )
+    except Exception:  # noqa: BLE001 -- fail open; TimeoutError is covered here too
+        # Tier 2 is an optimisation. Anything it does wrong costs Tier 3 budget; nothing
+        # it does wrong may cost the reader a fact-check. See tier2.py's module docstring.
+        tier2_verdict = None
+
     if tier2_verdict is not None:
-        # Not reachable today -- tier2.screen() always returns None, see its module
-        # docstring -- but wired for when a real Tier 2 exists.
+        # Tier 2 cleared the page: Tier 3 never runs, and the envelope says UNRATED with
+        # the reason in `summary` -- never OK, which is reserved for a real Tier 3 rollup.
         response = AnalysisResponse(
             schemaVersion="1.0",
             url=request.url,

@@ -1,0 +1,4 @@
+models/
+
+# Experimental Tier 2 checkpoints (weights are large and reproducible from train_ws4.py)
+models/ws4-*/

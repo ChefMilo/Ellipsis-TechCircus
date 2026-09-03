@@ -19,7 +19,14 @@ on a page that doesn't need one.
 4. If it *is* an article: the page's title, cleaned body text, author, date,
    and images are extracted locally (via Mozilla's Readability) and sent to
    the backend.
-5. The backend extracts the article's load-bearing factual claims, retrieves
+5. **Tier 2** screens the article in the backend in under a second — a fine-tuned
+   BERT text classifier and an AI-generated-image CNN, run in parallel — and
+   decides whether the page is worth the expense of Tier 3. Most pages stop here.
+   That is the point of the cascade: Tier 3 costs seconds and real API spend.
+   On by default; `DASFAX_TIER2_ENABLED=0` sends every page to Tier 3 instead. A page
+   Tier 2 clears is never fact-checked, so see [backend/WS4.md](backend/WS4.md) for what
+   the models do and do not detect, measured.
+6. **Tier 3** extracts the article's load-bearing factual claims, retrieves
    evidence for each one, and returns a verdict per claim — which the
    extension paints back onto the live article as highlights, with a
    bottom-right summary pill and a hovercard/evidence panel per claim.
@@ -46,6 +53,13 @@ npm run build                  # -> extension/service-worker.js + extension/cont
 Load `extension/` as an unpacked extension in Chrome (`chrome://extensions` →
 Developer mode → Load unpacked), then visit any real news article.
 
+**Tier 2 models are optional.** The image CNN downloads on first use; the text model is
+our own fine-tune and its 438MB of weights are not in the repo (past GitHub's limit).
+Until you run `pip install -r backend/requirements-ml.txt && python backend/train_ws4.py`,
+Tier 2 degrades to an offline heuristic and says so in `/health` and in every response —
+nothing breaks. See **[backend/WS4.md](backend/WS4.md)** for what the models do and do not
+detect, measured.
+
 **For the full walkthrough** — offline/no-network demo mode, swapping in real
 LLM/search providers, three concrete test URLs that exercise each tier, and
 every known limitation stated plainly — see **[DEMO.md](DEMO.md)**.
@@ -62,9 +76,12 @@ src/                  Chrome extension (TypeScript)
 backend/              FastAPI backend (Python)
   app/models/         contract.py — the single source of truth for the Tier 3 shape
   app/orchestrator/   WS3: routes a request through Tier 2 -> Tier 3 -> response
-  app/pipeline/       WS5: claim extraction + evidence retrieval
-  app/services/       Ranking, anchoring, assessment, envelope assembly
-  app/clients/        LLM / search / assessor backends (mock + real, swappable)
+  app/pipeline/       ws4.py — Tier 2 screening; ws5.py — claims + evidence
+  app/services/       Ranking, anchoring, assessment, envelope; Tier 2 scorers + calibration
+  app/clients/        LLM / search / assessor backends, and the Tier 2 model loaders
+                      (mock + real, swappable)
+  train_ws4.py        Fine-tunes the Tier 2 text model (~27 min, fixed seed)
+  ws4_eval.py         Tier 2 confusion matrices, threshold sweeps, real-news FPR
 
 docs/ws3/             Deep-dive docs on the contract, the message hop, and deploy
 DEMO.md               Full run-through: setup, offline mode, test URLs, limitations
@@ -95,6 +112,6 @@ Six workstreams, one extension:
 - **WS1** — Extension shell & page triage
 - **WS2** — In-page rendering & evidence panel
 - **WS3** — Backend orchestration & deploy
-- **WS4** — Tier 2 ML screening
+- **WS4** — Tier 2 ML screening ([backend/WS4.md](backend/WS4.md))
 - **WS5** — Claim extraction & evidence retrieval
 - **WS6** — Claim assessment
