@@ -17,6 +17,15 @@ import pytest
 def _offline_screening(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
     if request.node.get_closest_marker("models"):
         return
+    # Providers, for the same reason and now with real teeth: app/config.py loads the
+    # project's .env at import, so an unpinned suite inherits whatever the developer put
+    # there. With DASFAX_*_PROVIDER=anthropic and a live key in that file, tests which do
+    # not inject their own client built REAL Anthropic clients and made billed network
+    # calls -- the suite went from 11s to hanging past 120s. Offline is a property of this
+    # suite, not of the machine it runs on.
+    monkeypatch.setenv("DASFAX_LLM_PROVIDER", "mock")
+    monkeypatch.setenv("DASFAX_SEARCH_PROVIDER", "mock")
+    monkeypatch.setenv("DASFAX_ASSESSOR_PROVIDER", "mock")
     monkeypatch.setenv("DASFAX_SCREENING_MODE", "heuristic")
     # Both halves explicitly: the image component defaults to "auto" in the shipped
     # configuration (the CNN works; no text checkpoint does), so pinning only the global

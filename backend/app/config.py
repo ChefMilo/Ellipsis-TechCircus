@@ -14,6 +14,26 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from dotenv import find_dotenv, load_dotenv
+
+# Load the project's .env into os.environ ONCE, at import, before anything below reads a
+# variable. Without this the file is inert on the native path: get_settings() reads
+# os.environ directly, so `python -m uvicorn app.main:app` saw only what the shell had
+# already exported and silently served the mock providers no matter what .env said.
+#
+# find_dotenv(usecwd=True) walks UP from the current working directory, so the same
+# command works whether the server is launched from backend/ (the documented way, where
+# the file is one level up) or from the repo root.
+#
+# override=False (the default, stated explicitly because it is load-bearing): a variable
+# already present in the process environment WINS over the file. An explicit
+# `$env:DASFAX_LLM_PROVIDER = "mock"` in the shell, docker-compose's env_file injection,
+# or a test's monkeypatch.setenv must not be silently overwritten by a stale .env.
+#
+# Absent file: find_dotenv returns "" and load_dotenv is a no-op, so a clean clone with no
+# .env still starts normally on the documented mock defaults.
+load_dotenv(find_dotenv(usecwd=True), override=False)
+
 
 def _get_str(name: str, default: str) -> str:
     value = os.environ.get(name)

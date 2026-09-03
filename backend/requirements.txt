@@ -2,6 +2,10 @@
 fastapi>=0.110,<1.0
 uvicorn[standard]>=0.27,<1.0
 pydantic>=2.6,<3.0
+# app/config.py imports this directly to load the project's .env at startup. It also
+# arrives transitively via uvicorn[standard], but an import we make ourselves gets its
+# own line -- otherwise a future uvicorn dropping the extra breaks the app, not the CLI.
+python-dotenv>=1.0,<2.0
 
 # Tests
 pytest>=8.0,<9.0
