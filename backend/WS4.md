@@ -194,8 +194,14 @@ identically. Do not over-claim precision about the exact value.
 
 ## Read this first: the BERT checkpoints are not usable as a gate
 
-Measured flag rate on **480 real news articles** (AG News test split, 120 each from World,
-Sports, Business, Sci/Tech), at the 0.40 threshold:
+Measured flag rate on **480 real news headline snippets** (AG News test split, 120 each
+from World, Sports, Business, Sci/Tech), at the 0.40 threshold.
+
+> **Correction.** This document said "480 real news articles" until it was checked. AG News
+> items are a headline plus one sentence — **38 words median**, not articles. Every FPR in
+> this section is a snippet-level number. It still supports abandoning these checkpoints
+> (they were all measured on the same text), but see *Document length changes the ranking*
+> below: at real article length the ordering is different.
 
 | model | real news flagged as fake | recall on our synthetic fakes |
 |---|---|---|
@@ -538,3 +544,81 @@ backend/
   ws4_bench.py                     latency measurement
   eval/heldout_dataset.json        60 labelled text + 18 image samples (synthetic)
 ```
+
+
+---
+
+## Document length changes the ranking
+
+Every false-positive rate above was measured on AG News: a headline plus one sentence, 38
+words median. Deployment is 400–800 word articles. That gap was not just imprecise
+labelling — it inverts conclusions.
+
+Re-measured on **600 BBC articles (433 words median)** from `SetFit/bbc-news` and
+`RealTimeData/bbc_news_alltime`, at a threshold giving 40% recall on PolitiFact-false
+statements (LIAR2 test, n=963):
+
+| model | AG News (38w) | BBC articles (433w) |
+|---|---|---|
+| `dhruvpal` + LIAR2 fine-tune | 29.4% | **62.7%** [58.7, 66.4] |
+| `dhruvpal/fake-news-bert` | 58.5% | **72.0%** [68.3, 75.4] |
+| ours (WELFake/BERT) | 44.8% | **27.7%** [24.2, 31.4] |
+| `heuristic-text-v1` | 10.2% | **1.2%** [0.6, 2.4] |
+
+**The two columns rank the models differently.** Models trained on articles (ours, and the
+heuristic's article-oriented features) improve with length; models trained on short claims
+degrade sharply. An FPR quoted without its document length is not a number, and this
+workstream quoted several.
+
+### The LIAR2 experiment, and why it does not ship
+
+WELFake's label answers *"did this come from a site someone tagged as fake"* — source
+reputation. LIAR2's answers *"did fact-checkers rate this claim false"* — veracity. Training
+on the first and testing on the second plausibly explained every ceiling we had hit, so we
+continued fine-tuning `dhruvpal/fake-news-bert` (DistilBERT, 67M) on LIAR2's train split.
+
+Held-out LIAR2 test (n=1,565; train/test near-duplicate overlap checked at 0.96%, so the
+gain is not leakage):
+
+| model | AUROC | FPR @40% recall | FPR @60% recall |
+|---|---|---|---|
+| **`dhruvpal` + LIAR2** | **0.830** | **2.8%** | **9.1%** |
+| `dhruvpal` as-is | 0.687 | 14.5% | 31.6% |
+| ours (WELFake/BERT) | 0.623 | 20.8% | 40.5% |
+| `heuristic-text-v1` | 0.532 | 82.2% | 82.2% |
+
+A large, real improvement — AUROC 0.623 → 0.830, false alarms down 7×. **And it is not a
+shipping candidate**, because the same model flags 62.7% of real BBC articles. It learned
+to judge 16-word political claims and fires indiscriminately on 400-word reporting.
+
+The lesson is methodological, not about this checkpoint: we optimised the only benchmark we
+could measure and moved away from the product. The benchmark and the deployment
+distribution were different, and the benchmark won.
+
+### What the heuristic actually is
+
+Its 0% snippet-level and 1.2% article-level false-positive rates were previously read as a
+virtue. On LIAR2 it scores **AUROC 0.532 — chance** — with 82.2% FPR on *true* statements,
+a mean score of 0.1898 on false vs 0.1834 on true, and only **20 distinct output values
+across 1,565 inputs**. It is very nearly a constant function.
+
+Its earlier "73.3% recall" was measured against synthetic fakes written with the markers it
+scans for — circular, and this document should not have quoted it alongside model numbers.
+The heuristic is not a safe fallback; it is an inert one. It catches shouty hoax prose and
+is blind to everything else.
+
+### Where this leaves the text half of Tier 2
+
+| | best available | status |
+|---|---|---|
+| article-level FPR | ours, 27.7% | too high to gate on |
+| statement-level AUROC | dhruvpal+LIAR2, 0.830 | wrong distribution |
+| **article-level recall** | **unmeasured** | **the blocker** |
+
+The safety-critical number — how many false *articles* a given threshold misses — has never
+been measured, because article-length text with veracity labels means FakeNewsNet, which
+publishes only article IDs and requires scraping. Until that exists, any operating point we
+quote pairs a recall from one distribution with a false-positive rate from another.
+
+That is the honest reason `DASFAX_TIER2_ENABLED` stays off, and it is now a data problem
+rather than a model problem.

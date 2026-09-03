@@ -102,6 +102,43 @@ def verify_label_direction(rows: list[dict]) -> int:
     return fake_label
 
 
+def build_liar2(limit: int) -> tuple[Dataset, Dataset, Dataset]:
+    """LIAR2: 18k statements with PolitiFact truthfulness ratings.
+
+    Why this corpus at all: WELFake's label answers "did this come from a site someone
+    tagged as fake", which is source reputation. LIAR2's answers "did fact-checkers rate
+    this claim false", which is veracity. Training on the first and evaluating on the
+    second is what capped every model we have measured.
+
+    0=pants-fire, 1=false -> FAKE. 4=mostly-true, 5=true -> REAL. The middle two
+    (barely-true, half-true) are dropped: they are genuinely mixed verdicts and forcing
+    them to a side teaches the model that ambiguity has a correct answer.
+
+    Splits are LIAR2's OWN train/validation. The test split is NEVER loaded here -- it is
+    the held-out benchmark every number in this workstream is quoted against, and reading
+    it during training would silently invalidate all of them.
+    """
+    def rows(split: str) -> list[dict]:
+        d = load_dataset("chengxuphd/liar2", split=split)
+        out = []
+        for r in d:
+            if r["label"] in (0, 1, 4, 5):
+                text = _WS.sub(" ", (r["statement"] or "")).strip()
+                if text:
+                    out.append({"content": text, "label": 1 if r["label"] in (0, 1) else 0})
+        return out
+
+    print("Loading LIAR2 (PolitiFact verdicts)…")
+    train = rows("train")[:limit]
+    val = rows("validation")
+    random.Random(SEED).shuffle(train)
+    half = len(val) // 2
+    print(f"  train {len(train)}  val {len(val) - half}  val-as-test {half}")
+    print(f"  train class balance: fake {sum(r['label'] for r in train)} / real {len(train) - sum(r['label'] for r in train)}")
+    print("  NOTE: LIAR2 test split deliberately NOT loaded — it is the held-out benchmark.")
+    return Dataset.from_list(train), Dataset.from_list(val[half:]), Dataset.from_list(val[:half])
+
+
 def build_dataset(augment_agnews: bool, limit: int) -> tuple[Dataset, Dataset, Dataset]:
     rng = random.Random(SEED)
     print("Loading WELFake…")
@@ -146,7 +183,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Fine-tune the WS4 Tier 2 text classifier.")
     ap.add_argument("--augment-agnews", action="store_true",
                     help="Add real news across content types to counter the register bias.")
-    ap.add_argument("--unfreeze", type=int, default=2, help="Trainable top encoder layers.")
+    ap.add_argument("--unfreeze", type=int, default=2,
+                    help="Trainable top encoder layers. -1 = full fine-tune (everything).")
+    ap.add_argument("--base-model", default=BASE_MODEL,
+                    help="Any HF sequence-classification encoder (bert/roberta/deberta-v3).")
+    ap.add_argument("--max-len", type=int, default=MAX_LEN, help="Token window.")
+    ap.add_argument("--corpus", choices=("welfake", "liar2"), default="welfake",
+                    help="welfake = source-reputation labels; liar2 = PolitiFact verdicts.")
     ap.add_argument("--epochs", type=float, default=2.0)
     ap.add_argument("--limit", type=int, default=40000, help="Max WELFake examples.")
     ap.add_argument("--batch", type=int, default=16)
@@ -154,11 +197,14 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     torch.manual_seed(SEED)
-    train_ds, val_ds, test_ds = build_dataset(args.augment_agnews, args.limit)
+    if args.corpus == "liar2":
+        train_ds, val_ds, test_ds = build_liar2(args.limit)
+    else:
+        train_ds, val_ds, test_ds = build_dataset(args.augment_agnews, args.limit)
 
-    tok = AutoTokenizer.from_pretrained(BASE_MODEL)
+    tok = AutoTokenizer.from_pretrained(args.base_model)
     model = AutoModelForSequenceClassification.from_pretrained(
-        BASE_MODEL, num_labels=2,
+        args.base_model, num_labels=2,
         id2label={0: "real", 1: "fake"},   # shipped, so nothing downstream has to guess
         label2id={"real": 0, "fake": 1},
         # Apple's MPS backend has no dropout in fused scaled-dot-product attention, so the
@@ -169,14 +215,31 @@ def main(argv: list[str] | None = None) -> int:
     # Partial fine-tuning: the lower layers already model English; only the top layers
     # carry the task-specific signal we need to change. Fewer trainable parameters also
     # means less capacity to memorise whatever shortcut survives scrubbing.
-    for p in model.bert.parameters():
-        p.requires_grad = False
-    for layer in model.bert.encoder.layer[-args.unfreeze:]:
-        for p in layer.parameters():
-            p.requires_grad = True
+    encoder = model.base_model
+    layers = None
+    for path in ("encoder.layer", "transformer.layer", "layers"):
+        obj = encoder
+        for part in path.split("."):
+            obj = getattr(obj, part, None)
+            if obj is None:
+                break
+        if obj is not None:
+            layers = obj
+            break
+    if layers is None:
+        raise SystemExit(f"cannot locate encoder layers on {type(encoder).__name__}")
+    if args.unfreeze < 0 or args.unfreeze >= len(layers):
+        scope = f"FULL fine-tune (all {len(layers)} layers + embeddings)"
+    else:
+        for p in encoder.parameters():
+            p.requires_grad = False
+        for layer in layers[-args.unfreeze:]:
+            for p in layer.parameters():
+                p.requires_grad = True
+        scope = f"top {args.unfreeze} of {len(layers)} encoder layers + head"
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"  trainable params: {trainable/1e6:.1f}M of {sum(p.numel() for p in model.parameters())/1e6:.1f}M "
-          f"(top {args.unfreeze} encoder layers + head)")
+          f"({scope})")
 
     def tokenize(batch):
         # Random window rather than always the first MAX_LEN tokens: the deployed path
@@ -185,12 +248,12 @@ def main(argv: list[str] | None = None) -> int:
         rng = random.Random(SEED)
         for content in batch["content"]:
             words = content.split()
-            span = MAX_LEN  # generous: tokens <= words is false, but truncation handles it
+            span = args.max_len  # generous: tokens <= words is false, but truncation handles it
             if len(words) > span:
                 start = rng.randrange(0, len(words) - span // 2)
                 content = " ".join(words[start : start + span])
             out.append(content)
-        return tok(out, truncation=True, max_length=MAX_LEN)
+        return tok(out, truncation=True, max_length=args.max_len)
 
     train_t = train_ds.map(tokenize, batched=True, remove_columns=["content"])
     val_t = val_ds.map(tokenize, batched=True, remove_columns=["content"])
@@ -228,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     trainer.train()
 
-    print("\nHeld-out WELFake test split:")
+    print(f"\nHeld-out {args.corpus} test split:")
     print(" ", trainer.evaluate(eval_dataset=test_t))
 
     args.out.mkdir(parents=True, exist_ok=True)

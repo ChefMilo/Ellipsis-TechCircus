@@ -366,7 +366,9 @@ def evaluate_realnews(per_category: int = 120) -> int:
     threshold = settings.heuristic_text_threshold if mode == "heuristic" else settings.text_threshold
     print(f"  backend        {backend_name}")
     print(f"  threshold      {threshold:.3f}  (text_mode={mode})")
-    print(f"  corpus         AG News test split, {per_category} per category\n")
+    print(f"  corpus         AG News test split, {per_category} per category")
+    print("  UNIT           headline + one sentence (~38 words), NOT full articles —")
+    print("                 see WS4.md 'Document length changes the ranking'\n")
     print("  category      n   flagged as fake   95% interval")
     print("  " + "-" * 54)
 

@@ -108,7 +108,11 @@ class Settings:
     # heuristic   forced offline; what CI sets
     #
     # DEFAULTS TO "heuristic" ON EVIDENCE, not for convenience. Measured flag rate on 480
-    # REAL news articles (AG News test split, 120 each from World/Sports/Business/Sci-Tech):
+    # REAL news HEADLINE SNIPPETS (AG News test split, 120 each from World/Sports/Business/
+    # Sci-Tech). NOTE THE UNIT: AG News items are a headline plus one sentence, 38 words
+    # median -- they are NOT articles, and this file described them as articles until it
+    # was checked. Deployment is 400-800 word articles; see the article-length table below,
+    # where several models behave completely differently.
     #
     #   omykhailiv/bert-fake-news-recognition    83.1% of real news flagged as fake
     #   Pulk17/Fake-News-Detection               61.7%
@@ -139,7 +143,7 @@ class Settings:
     # heuristic would leave the fallback almost inert, and vice versa. The scorer decides
     # which one applies (see app/clients/*_screening.py and hf_text.py).
     #
-    # Fine-tuned model (models/dasfax-tier2-text), swept on 480 real AG News articles:
+    # Fine-tuned model (models/dasfax-tier2-text), swept on 480 AG News snippets (38w):
     #
     #   thresh   real-news FPR   all-fake recall   hard-fake recall   chilli article
     #    0.400        50.8%           76.7%             12.5%          FLAGGED
@@ -156,6 +160,19 @@ class Settings:
     # for no measured recall gain; both score 0% on the hard subset. It is active because
     # the proposal specifies a BERT classifier and the team chose fidelity to that;
     # DASFAX_TEXT_MODE=heuristic reverses it in one variable.
+    # FALSE-POSITIVE RATE BY DOCUMENT LENGTH, at a threshold giving 40% recall on
+    # PolitiFact-false statements (LIAR2 test). This is the table that matters for
+    # deployment, and it was missing until AG News was found to be 38-word snippets:
+    #
+    #   model                     AG News (38w)   BBC articles (433w)
+    #   dhruvpal+LIAR2 fine-tune       29.4%           62.7%     <- best on statements
+    #   dhruvpal/fake-news-bert        58.5%           72.0%
+    #   ours (WELFake/BERT)            44.8%           27.7%     <- best on ARTICLES
+    #   heuristic-text-v1              10.2%            1.2%     (but AUROC 0.532 = chance)
+    #
+    # The two columns rank the models DIFFERENTLY. A model trained on short claims fires
+    # indiscriminately on long text and vice versa, so any FPR quoted without its document
+    # length is meaningless. Deployment is the right-hand column.
     text_threshold: float = 0.995
     # The heuristic's own operating point, unchanged and separately calibrated.
     heuristic_text_threshold: float = 0.40
