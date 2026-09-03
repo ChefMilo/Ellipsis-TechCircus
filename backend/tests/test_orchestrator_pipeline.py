@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -58,7 +58,7 @@ def test_published_at_and_source_domain_survive_into_article_input():
 
     # This is the field that was previously silently dropped by extra="ignore"
     # (docs/ws3/WS3-CONTRACT-AUDIT.md Task C; docs/ws3/WS3-MESSAGE-HOP.md task 6) -- must now survive.
-    assert article.published_at == datetime(2026, 2, 1, tzinfo=timezone.utc)
+    assert article.published_at == datetime(2026, 2, 1, tzinfo=UTC)
     assert article.url == request.url
     assert article.title == request.title
     assert article.text == request.text

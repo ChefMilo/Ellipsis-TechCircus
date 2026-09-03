@@ -21,7 +21,7 @@ T = TypeVar("T")
 def cache_key(url: str, text: str) -> str:
     """sha256 of (url, text). NUL-separated so ("ab", "c") and ("a", "bc") can't
     collide the way plain string concatenation would risk."""
-    return hashlib.sha256(f"{url}\x00{text}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{url}\x00{text}".encode()).hexdigest()
 
 
 @dataclass
