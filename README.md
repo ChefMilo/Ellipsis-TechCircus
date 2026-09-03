@@ -53,12 +53,63 @@ npm run build                  # -> extension/service-worker.js + extension/cont
 Load `extension/` as an unpacked extension in Chrome (`chrome://extensions` →
 Developer mode → Load unpacked), then visit any real news article.
 
-**Tier 2 models are optional.** The image CNN downloads on first use; the text model is
-our own fine-tune and its 438MB of weights are not in the repo (past GitHub's limit).
-Until you run `pip install -r backend/requirements-ml.txt && python backend/train_ws4.py`,
-Tier 2 degrades to an offline heuristic and says so in `/health` and in every response —
-nothing breaks. See **[backend/WS4.md](backend/WS4.md)** for what the models do and do not
-detect, measured.
+### Tier 2 model weights
+
+The image CNN downloads itself on first use. **The text model does not** — it is our own
+fine-tune, and its 418MB of weights are not in the repo: GitHub rejects any single file
+over 100MB, and the weights compress to 387MB at best. Get them one of two ways.
+
+**Option A — copy the folder (5 minutes, recommended).** Ask a teammate for
+`dasfax-tier2-text.tgz`, then from the repo root:
+
+```bash
+mkdir -p backend/models
+tar -xzf dasfax-tier2-text.tgz -C backend/models
+```
+
+The folder must land at exactly `backend/models/dasfax-tier2-text/`, containing
+`model.safetensors`, `config.json`, `tokenizer.json`, `tokenizer_config.json`,
+`special_tokens_map.json` and `vocab.txt`.
+
+**Option B — train it yourself (~27 minutes).**
+
+```bash
+pip install -r backend/requirements-ml.txt
+cd backend && python train_ws4.py
+```
+
+This trains on the same corpus with the same seed, but it will not reproduce the shipped
+weights *exactly*: the script does not set `torch.use_deterministic_algorithms`, and
+floating-point results differ across MPS / CUDA / CPU. You get an equivalent model, not an
+identical one — and since Tier 2 ships at a threshold of 0.995, the measured figures in
+[backend/WS4.md](backend/WS4.md) describe the shipped weights specifically. Prefer Option A
+if you want the numbers to match.
+
+### Verify which backend is actually live
+
+Do this after either option, before concluding anything from a run:
+
+```bash
+curl -s localhost:8000/health | python3 -m json.tool | grep -A3 screening_backends
+```
+
+```json
+"screening_backends": [
+    "text: hf:models/dasfax-tier2-text",
+    "image: hf:Organika/sdxl-detector"
+]
+```
+
+If it reads `heuristic-text-v1`, the weights were not found — check the path above.
+
+**This matters more than it looks.** Tier 2 gating is ON by default, and when the text
+model is missing the backend falls back to a keyword heuristic that clears almost every
+page. You will get `unrated` with zero claims on every article, with `status: complete`
+and no error anywhere — indistinguishable from a broken backend. Set
+`DASFAX_TIER2_ENABLED=0` to route every page to Tier 3 regardless, which is also what you
+want if you are demoing without the weights.
+
+See **[backend/WS4.md](backend/WS4.md)** for what the models do and do not detect, measured.
 
 **For the full walkthrough** — offline/no-network demo mode, swapping in real
 LLM/search providers, three concrete test URLs that exercise each tier, and
@@ -80,7 +131,7 @@ backend/              FastAPI backend (Python)
   app/services/       Ranking, anchoring, assessment, envelope; Tier 2 scorers + calibration
   app/clients/        LLM / search / assessor backends, and the Tier 2 model loaders
                       (mock + real, swappable)
-  train_ws4.py        Fine-tunes the Tier 2 text model (~27 min, fixed seed)
+  train_ws4.py        Fine-tunes the Tier 2 text model (~27 min; see Tier 2 model weights)
   ws4_eval.py         Tier 2 confusion matrices, threshold sweeps, real-news FPR
 
 docs/ws3/             Deep-dive docs on the contract, the message hop, and deploy

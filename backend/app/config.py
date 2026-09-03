@@ -197,7 +197,11 @@ class Settings:
     # Real model checkpoints (read unless screening_mode="heuristic").
     # Our fine-tune (train_ws4.py). Weights are NOT in the repo — 438MB, past GitHub's
     # limit — so a fresh clone degrades to the heuristic with a message naming the command
-    # that produces them. Reproducible in ~27 min from a fixed seed.
+    # that produces them. train_ws4.py rebuilds an equivalent model in ~27 min, but NOT a
+    # bit-identical one: it does not set torch.use_deterministic_algorithms, and MPS/CUDA/CPU
+    # disagree in the last places. At a 0.995 operating point that can move decisions, so the
+    # figures below describe THESE weights. Copy the folder rather than retrain if you need
+    # them to hold. See README.md 'Tier 2 model weights'.
     bert_model_name: str = "models/dasfax-tier2-text"
     image_model_name: str = "Organika/sdxl-detector"
     # Pin a commit SHA so a confusion matrix stays reproducible when the checkpoint moves.
